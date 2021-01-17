@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.13)
-project(ModLoader)
+project(ModLoader VERSION 0.1.0)
 
 # Global Settings
 set(CMAKE_CXX_STANDARD 11)
