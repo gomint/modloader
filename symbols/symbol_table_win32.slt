@@ -1,0 +1,1 @@
+getIncredibleValue,int (*getIncredibleValuePtr)(),getIncredibleValuePtr,getIncredibleValue
