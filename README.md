@@ -20,6 +20,8 @@ Example:
 ~ > cmake -DMODLOADER_BEDROCK_PDB=<Path to PDB> --build ~/build --target ModLoader
 ```
 
+One more note: when compiling for Win64 make sure to explicitly specify the amd64 architecture to MSVC. If you don't the Preloader binary will not be able to inject the ModLoader DLL into the Bedrock Dedicated Server executable.
+
 ## ▶️ How to run
 
 In order to run ModLoader on a Bedrock Dedicated Server use the Preloader executable like this
