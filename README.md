@@ -13,11 +13,17 @@ There are several limitations to this approach, the most stringent one being tha
 
 ## 📦 How to Compile
 
-On Windows, a recent version of the Microsoft Visual C++ compiler suite is required. Both a recent version of the compiler as well as a recent version of the Windows Kit (8.1 or 10) is required. The reason for this is that the SymExtract module which extract the required address offsets depends on the dbghelp library that ships with said Windows Kit versions. Lastly, the .pdb file that ships with the desired Bedrock Dedicated Server executable is required. When invoking CMake to build the ModLoader DLL, make sure to specify a `MODLOADER_BEDROCK_PDB` CMake variable that specifies the full path to the .pdb file.
+On Windows, a recent version of the Microsoft Visual C++ compiler suite is required. Both a recent version of the compiler as well as a recent version of the Windows Kit (8.1 or 10) is required. The reason for this is that the SymExtract module which extract the required address offsets depends on the dbghelp library that ships with said Windows Kit versions. There are more dependencies which are nested as git submodules into this repository, so make sure to download them as well when cloning this repository.
+```shell
+git clone --recurse-submodules https://github.com/gomint/modloader.git
+or
+git pull --recurse-submodules
+```
+Lastly, the .pdb file that ships with the desired Bedrock Dedicated Server executable is required. When invoking CMake to build the ModLoader DLL, make sure to specify a `MODLOADER_BEDROCK_PDB` CMake variable that specifies the full path to the .pdb file.
 
 Example:
-```
-~ > cmake -DMODLOADER_BEDROCK_PDB=<Path to PDB> --build ~/build --target ModLoader
+```shell
+cmake -DMODLOADER_BEDROCK_PDB=<Path to PDB> --build ~/build --target ModLoader
 ```
 
 One more note: when compiling for Win64 make sure to explicitly specify the amd64 architecture to MSVC. If you don't the Preloader binary will not be able to inject the ModLoader DLL into the Bedrock Dedicated Server executable.
@@ -25,8 +31,8 @@ One more note: when compiling for Win64 make sure to explicitly specify the amd6
 ## ▶️ How to run
 
 In order to run ModLoader on a Bedrock Dedicated Server use the Preloader executable like this
-```
-~ > preloader bedrock_server.exe ModLoader.dll
+```shell
+preloader bedrock_server.exe ModLoader.dll
 ```
 
 ## 👥 Contributions
