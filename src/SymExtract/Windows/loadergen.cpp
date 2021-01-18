@@ -3,49 +3,21 @@
 // Version 1.0.0
 // Stability: experimental
 //
-#include <cstdio>
 #include <unordered_map>
 #include <fstream>
 
-#include "../Symbol.h"
+using namespace std;
 
-bool generateLoader(std::unordered_map<std::string, Symbol>& symbols, const char* outputFile) {
-    std::string file = std::string(outputFile) + ".cpp";
-    std::ofstream outfile(file);
-    if (!outfile) {
-        printf("Could not open implementation file for generation\n");
-        return false;
+namespace GoMint {
+    void generatePlatformIncludes(char* indent, ofstream& out) {
+        out << indent << "#include <Windows.h>" << endl;
     }
 
-    outfile << "#include \"Symbols.h\"\n";
-    outfile << "#include <Windows.h>\n";
-    outfile << "namespace GoMint { namespace Symbols {\n\n";
-
-    for (auto& it : symbols) {
-        Symbol& symbol = it.second;
-
-        outfile << "\t" << symbol.m_pointerType << " " << symbol.m_pointerVar << " = nullptr;\n";
+    void generatePlatformLoader(char* indent, ofstream& out) {
+        out << indent << "std::uintptr_t loadBaseAddress() {" << endl;
+        out << indent << "\tHMODULE hModule = GetModuleHandle(NULL);" << endl;
+        out << indent << "\tif (hModule == NULL) return 0;" << endl;
+        out << indent << "\telse return (std::uintptr_t) hModule;" << endl;
+        out << indent << "}" << endl;
     }
-    outfile << "\n";
-
-    outfile << "\tbool loadSymbols() {\n";
-    outfile << "\t\tHMODULE hModule = GetModuleHandle(NULL);\n";
-    outfile << "\t\tif (hModule == NULL) return false;\n";
-    outfile << "\n";
-    outfile << "\t\tUINT_PTR uBaseAddr = (UINT_PTR) hModule;\n";
-    outfile << "\n";
-
-    for (auto& it : symbols) {
-        Symbol& symbol = it.second;
-
-        outfile << "\t\t" << symbol.m_pointerVar << " = " << "(" << symbol.m_pointerType << ")(uBaseAddr + " << symbol.m_addressOffset << "ULL);\n";
-    }
-
-    outfile << "\n";
-    outfile << "\t\treturn true;\n";
-    outfile << "\t}\n\n";
-
-    outfile << "} }\n";
-
-    return true;
 }

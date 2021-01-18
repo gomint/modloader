@@ -3,12 +3,16 @@
 // Version 1.0.0
 // Stability: experimental
 //
-#include "Symbol.h"
+#include "extract.h"
+#include "Generator/Generator.h"
+
+#include "SymExtract/Helpers.h"
 
 #include <cstdio>
 #include <fstream>
-#include <sstream>
 #include <unordered_map>
+
+using namespace GoMint;
 
 const char* g_usage =
         "symextract - extract symbols from .pdb and executable files"           "\n"
@@ -29,95 +33,70 @@ const char* g_usage =
         "\n"
         "  Example: symextract symbol_table.csv main.exe symbols.cpp"           "\n";
 
-extern bool extractSymbols(std::unordered_map<std::string, Symbol>& symbols, const char* inputFile);
-extern bool generateLoader(std::unordered_map<std::string, Symbol>& symbols, const char* outputFile);
-
-std::unordered_map<std::string, Symbol> g_symbolTable;
-
-bool readSymbolTable(const char* file) {
-    g_symbolTable.clear();
-
+bool readDefinitionTable(DefinitionTable& definitions, const char* file) {
     std::ifstream infile(file);
     if (!infile) {
         return false;
     }
 
-    std::string line;
-    while (std::getline(infile, line)) {
-        std::size_t firstN = line.find(',', 0);
-        std::size_t secondN = line.find(',', firstN + 1);
-        std::size_t thirdN = line.find(',', secondN + 1);
-        std::size_t fourthN = line.length();
+    nlohmann::json j;
+    infile >> j;
 
-        if (firstN == std::string::npos ||
-            secondN == std::string::npos ||
-            thirdN == std::string::npos ||
-            fourthN == std::string::npos) {
-            printf("Invalid line in symbol table: fewer than four columns!\n");
-            continue;
-        }
-
-        std::string lookupName = line.substr(0, firstN);
-        g_symbolTable.emplace(std::make_pair(lookupName, Symbol(lookupName,
-                                                                line.substr(firstN + 1, secondN - firstN - 1),
-                                                                line.substr(secondN + 1, thirdN - secondN - 1),
-                                                                line.substr(thirdN + 1, fourthN - thirdN - 1))));
-    }
-
-    infile.close();
+    definitions = j.get<GoMint::DefinitionTable>();
     return true;
 }
 
-bool checkSymbolAddresses() {
+bool checkSymbolAddresses(const DefinitionTable& definitions) {
     bool foundAllAddresses = true;
 
-    for (auto & it : g_symbolTable) {
-        Symbol& symbol = it.second;
+    for (auto& it : definitions.m_symbolDeclsByName) {
+        SymbolDecl& symbol = *(it.second);
 
         if (symbol.m_addressOffset == 0) {
             foundAllAddresses = false;
-            printf("%p: %s (missing)\n", (void*) symbol.m_addressOffset, symbol.m_lookupName.c_str());
+            printf("%p: %s (missing)\n", (void*) symbol.m_addressOffset, symbol.m_name.c_str());
         } else {
-            printf("%p: %s (found)\n", (void*) symbol.m_addressOffset, symbol.m_lookupName.c_str());
+            printf("%p: %s (found)\n", (void*) symbol.m_addressOffset, symbol.m_name.c_str());
         }
     }
 
     return foundAllAddresses;
 }
 
-bool generateHeader(const char* file) {
-    std::string headerFile = std::string(file) + ".h";
-    std::ofstream outfile(headerFile);
-    if (!outfile) {
-        printf("Could not open header file for generation\n");
-        return false;
-    }
+//bool generateHeader(const char* file) {
+//    std::string headerFile = std::string(file) + ".h";
+//    std::ofstream outfile(headerFile);
+//    if (!outfile) {
+//        printf("Could not open header file for generation\n");
+//        return false;
+//    }
+//
+//    outfile << "#ifndef __SYMEXTRACT_GENERATED_HEADER__\n";
+//    outfile << "#define __SYMEXTRACT_GENERATED_HEADER__\n\n";
+//
+//    outfile << "namespace GoMint { namespace Symbols {\n\n";
+//
+//    for (auto& it : g_symbolTable) {
+//        Symbol& symbol = it.second;
+//
+//        outfile << "\ttypedef " << symbol.m_pointerTypeDecl << ";\n";
+//        outfile << "\textern " << symbol.m_pointerType << " " << symbol.m_pointerVar << ";\n";
+//        outfile << "\n";
+//    }
+//
+//    outfile << "\tbool loadSymbols();\n\n";
+//
+//    outfile << "} }\n\n";
+//
+//    outfile << "#endif // __SYMEXTRACT_GENERATED_HEADER__\n";
+//
+//    return true;
+//}
+//
+//bool generateGlueCode(const char* file) {
+//    return generateHeader(file) && generateLoader(g_symbolTable, file);
+//}
 
-    outfile << "#ifndef __SYMEXTRACT_GENERATED_HEADER__\n";
-    outfile << "#define __SYMEXTRACT_GENERATED_HEADER__\n\n";
-
-    outfile << "namespace GoMint { namespace Symbols {\n\n";
-
-    for (auto& it : g_symbolTable) {
-        Symbol& symbol = it.second;
-
-        outfile << "\ttypedef " << symbol.m_pointerTypeDecl << ";\n";
-        outfile << "\textern " << symbol.m_pointerType << " " << symbol.m_pointerVar << ";\n";
-        outfile << "\n";
-    }
-
-    outfile << "\tbool loadSymbols();\n\n";
-
-    outfile << "} }\n\n";
-
-    outfile << "#endif // __SYMEXTRACT_GENERATED_HEADER__\n";
-
-    return true;
-}
-
-bool generateGlueCode(const char* file) {
-    return generateHeader(file) && generateLoader(g_symbolTable, file);
-}
 
 int main(int argc, char* argv[]) {
     if (argc != 4) {
@@ -129,22 +108,27 @@ int main(int argc, char* argv[]) {
     const char* inputPath = argv[2];
     const char* outputPath = argv[3];
 
-    if (!readSymbolTable(symbolTablePath)) {
-        printf("Failed to read symbol table\n");
+    DefinitionTable definitions;
+
+    if (!readDefinitionTable(definitions, symbolTablePath)) {
+        printf("Failed to read definition table\n");
         return 1;
     }
 
-    if (!extractSymbols(g_symbolTable, inputPath)) {
+    if (!extractSymbols(definitions, inputPath)) {
+        printf("Failed to extract symbols\n");
         return 1;
     }
 
-    if (!checkSymbolAddresses()) {
+    if (!checkSymbolAddresses(definitions)) {
         printf("Could not resolve all symbol addresses\n");
         return 1;
     }
 
-    if (!generateGlueCode(outputPath)) {
-        printf("Could not generate glue code\n");
+    Generator generator;
+    std::string baseFile(outputPath);
+    if (!generator.run(definitions, baseFile + ".h", baseFile + ".cpp")) {
+        printf("Glue code generation failed\n");
         return 1;
     }
 

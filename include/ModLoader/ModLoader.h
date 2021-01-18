@@ -7,6 +7,9 @@
 #ifndef MODLOADER_MODLOADER_H
 #define MODLOADER_MODLOADER_H
 
+#include <SymExtract/Symbols.h>
+
+#include <funchook.h>
 #include <memory>
 
 namespace GoMint {
@@ -21,6 +24,7 @@ namespace GoMint {
     class ModLoader {
 
         friend class ModLoaderEntry;
+
     public:
 
         /**
@@ -34,9 +38,29 @@ namespace GoMint {
         /** The mod loader singleton instance */
         static std::unique_ptr<ModLoader> k_modLoader;
 
+        /*
+         * Hooks
+         */
+        typedef void (*DedicatedServer_Start)(void* instance);
+
+        static void hook_DedicatedServer_start(void* instance);
+
+        DedicatedServer_Start m_DedicatedServer_Start;
+
+        /*
+         * Fields
+         */
+        funchook_t* m_hooks;
+        SymExtract::SymbolTable m_symbolTable;
+        SymExtract::DedicatedServer* m_dedicatedServer;
+
+        /*
+         * Methods
+         */
         ModLoader();
 
         bool initialize();
+        bool installHooks();
 
     };
 

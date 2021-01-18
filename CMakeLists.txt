@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.13)
 project(ModLoader VERSION 0.1.0)
 
 # Global Settings
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_C_STANDARD 99)
 
 set(MODLOADER_BEDROCK_PDB "${PROJECT_SOURCE_DIR}/symbols/bedrock_server.pdb" CACHE FILEPATH "Please specify the path to your bedrock_server.pdb file")
@@ -18,19 +18,25 @@ if (WIN32)
 endif ()
 
 target_include_directories(ModLoader PUBLIC include)
+target_include_directories(SymExtract PUBLIC include)
 
 #
 # External Libraries
 #
+set(JSON_BuildTests OFF CACHE INTERNAL "")
+
 add_subdirectory(extern/funchook)
+add_subdirectory(extern/json)
 
 target_link_libraries(ModLoader PRIVATE funchook-static)
+target_link_libraries(SymExtract PRIVATE nlohmann_json::nlohmann_json)
 
 #
 # Source Tree
 #
 add_subdirectory(include/Minecraft)
 add_subdirectory(include/ModLoader)
+add_subdirectory(include/SymExtract)
 add_subdirectory(src/ModLoader)
 add_subdirectory(src/SymExtract)
 
@@ -45,7 +51,7 @@ if (WIN32)
     file(MAKE_DIRECTORY ${PROJECT_SOURCE_DIR}/symbols/SymExtract)
     add_custom_command(
         OUTPUT ${PROJECT_SOURCE_DIR}/symbols/SymExtract/Symbols.h ${PROJECT_SOURCE_DIR}/symbols/SymExtract/Symbols.cpp
-        COMMAND SymExtract ${PROJECT_SOURCE_DIR}/symbols/symbol_table_win32.slt ${MODLOADER_BEDROCK_PDB} ${PROJECT_SOURCE_DIR}/symbols/SymExtract/Symbols
+        COMMAND SymExtract ${PROJECT_SOURCE_DIR}/symbols/symbols_win32.json ${MODLOADER_BEDROCK_PDB} ${PROJECT_SOURCE_DIR}/symbols/SymExtract/Symbols
         DEPENDS SymExtract
     )
 

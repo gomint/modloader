@@ -5,10 +5,6 @@
 //
 #include <ModLoader/ModLoader.h>
 
-#include <SymExtract/Symbols.h>
-
-#include <cstdio>
-
 namespace GoMint {
 
     std::unique_ptr<ModLoader> ModLoader::k_modLoader;
@@ -22,13 +18,55 @@ namespace GoMint {
     }
 
     bool ModLoader::initialize() {
-        if (!Symbols::loadSymbols()) {
+        if (!SymExtract::loadSymbols(&m_symbolTable)) {
+            printf("[ModLoader] Failed to load native symbols\n");
+            return false;
+        }
+        SymExtract::installTypes(&m_symbolTable);
+        printf("[ModLoader] Loaded native symbols\n");
+
+        if (!installHooks()) {
+            printf("[ModLoader] Failed to install hooks\n");
+        }
+        printf("[ModLoader] Installed hooks\n");
+
+        printf("[ModLoader] Initialization complete\n");
+        return true;
+    }
+
+    bool ModLoader::installHooks() {
+        m_hooks = funchook_create();
+
+        int result;
+
+        m_DedicatedServer_Start = reinterpret_cast<DedicatedServer_Start>(SymExtract::retrieveFunctionAddress(m_symbolTable.DedicatedServer_start_ptr));
+        result = funchook_prepare(m_hooks, (void**) &m_DedicatedServer_Start, (void*) &hook_DedicatedServer_start);
+        if (result != 0) {
+            printf("[ModLoader] Failed to prepare hook into DedicatedServer::start()\n");
             return false;
         }
 
-        int value = Symbols::getIncredibleValue();
-        printf("The incredible value is: %d\n", value);
+        result = funchook_install(m_hooks, 0);
+        if (result != 0) {
+            printf("[ModLoader] Failed to install hooks\n");
+            return false;
+        }
+
         return true;
+    }
+
+
+    /*
+     * Hooks
+     */
+    void ModLoader::hook_DedicatedServer_start(void* instance) {
+        ModLoader* modLoader = ModLoader::getInstance();
+        modLoader->m_dedicatedServer = reinterpret_cast<SymExtract::DedicatedServer*>(instance);
+
+        printf("[ModLoader] Hook triggered: DedicatedServer::start()\n");
+        printf("[ModLoader] ModLoader::m_dedicatedServer = %p\n", modLoader->m_dedicatedServer);
+
+        modLoader->m_DedicatedServer_Start(instance);
     }
 
 }

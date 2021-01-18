@@ -1,0 +1,21 @@
+target_sources(SymExtract
+    PRIVATE
+        DefinitionTable.cpp
+        DefinitionTable.h
+        ForwardDecl.cpp
+        ForwardDecl.h
+        Generator.cpp
+        Generator.h
+        MemberFunctionDecl.cpp
+        MemberFunctionDecl.h
+        SymbolDecl.cpp
+        SymbolDecl.h
+        SymbolFunctionDecl.cpp
+        SymbolFunctionDecl.h
+        SymbolMemberFunctionDecl.cpp
+        SymbolMemberFunctionDecl.h
+        SymbolMemberFunctionInheritance.h
+        SymbolType.h
+        TypeDecl.cpp
+        TypeDecl.h
+)
