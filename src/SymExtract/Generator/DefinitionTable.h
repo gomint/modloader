@@ -24,6 +24,7 @@ namespace GoMint {
      */
     struct DefinitionTable {
 
+        std::vector<std::string> m_includes;
         std::vector<ForwardDecl> m_forwardDecls;
         std::vector<TypeDecl> m_typeDecls;
         std::vector<std::unique_ptr<SymbolDecl>> m_symbolDecls;

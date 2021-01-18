@@ -41,9 +41,9 @@ namespace GoMint {
         /*
          * Hooks
          */
-        typedef void (*DedicatedServer_Start)(void* instance);
+        typedef void (*DedicatedServer_Start)(void* instance, const std::string& sessionId);
 
-        static void hook_DedicatedServer_start(void* instance);
+        static void hook_DedicatedServer_start(void* instance, const std::string& sessionId);
 
         DedicatedServer_Start m_DedicatedServer_Start;
 

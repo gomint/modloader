@@ -40,6 +40,7 @@ namespace GoMint {
         void decreaseIndent();
 
         bool generateHeader(const DefinitionTable& definitions, const std::string& headerFile);
+        void generateHeaderIncludes(const DefinitionTable& definitionTable, std::ofstream& out);
         void generateHeaderForwardDeclarations(const DefinitionTable& definitions, std::ofstream& out);
         void generateHeaderTypes(const DefinitionTable& definitions, std::ofstream& out);
         void generateHeaderMemberFunction(const DefinitionTable& definitionTable, std::ofstream& out,

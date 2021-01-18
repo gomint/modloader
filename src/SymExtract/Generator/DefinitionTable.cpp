@@ -53,12 +53,14 @@ namespace nlohmann {
 namespace GoMint {
 
     void to_json(nlohmann::json& j, const GoMint::DefinitionTable& p) {
+        j["includes"] = p.m_includes;
         j["forward"] = p.m_forwardDecls;
         j["types"] = p.m_typeDecls;
         j["symbols"] = p.m_symbolDecls;
     }
 
     void from_json(const nlohmann::json& j, GoMint::DefinitionTable& p) {
+        j.at("includes").get_to(p.m_includes);
         j.at("forward").get_to(p.m_forwardDecls);
         j.at("types").get_to(p.m_typeDecls);
         j.at("symbols").get_to(p.m_symbolDecls);

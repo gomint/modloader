@@ -59,14 +59,15 @@ namespace GoMint {
     /*
      * Hooks
      */
-    void ModLoader::hook_DedicatedServer_start(void* instance) {
+    void ModLoader::hook_DedicatedServer_start(void* instance, const std::string& sessionId) {
         ModLoader* modLoader = ModLoader::getInstance();
         modLoader->m_dedicatedServer = reinterpret_cast<SymExtract::DedicatedServer*>(instance);
 
         printf("[ModLoader] Hook triggered: DedicatedServer::start()\n");
         printf("[ModLoader] ModLoader::m_dedicatedServer = %p\n", modLoader->m_dedicatedServer);
+        printf("[ModLoader] The real session ID was: %s\n", sessionId.c_str());
 
-        modLoader->m_DedicatedServer_Start(instance);
+        modLoader->m_DedicatedServer_Start(instance, sessionId);
     }
 
 }

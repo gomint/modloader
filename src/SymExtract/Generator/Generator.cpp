@@ -36,6 +36,7 @@ namespace GoMint {
         out << m_indent << "#define __SYMEXTRACT_GENERATED_HEADER__" << endl;
         out << endl;
         out << m_indent << "#include <SymExtract/Helpers.h>" << endl;
+        generateHeaderIncludes(definitions, out);
         out << endl;
         out << m_indent << "namespace GoMint { namespace SymExtract {" << endl;
         out << endl;
@@ -58,6 +59,14 @@ namespace GoMint {
         out << m_indent << "#endif // __SYMEXTRACT_GENERATED_HEADER__" << endl;
         out.close();
         return true;
+    }
+
+    void Generator::generateHeaderIncludes(const DefinitionTable& definitionTable, ofstream& out) {
+        out << endl;
+        for (const auto& include : definitionTable.m_includes) {
+            out << m_indent << "#include " << include << endl;
+        }
+        out << endl;
     }
 
     void Generator::generateHeaderForwardDeclarations(const DefinitionTable& definitions, ofstream& out) {
