@@ -120,10 +120,14 @@ int main(void) {
         return 1;
     }
 
+    printf("[PreLoader] Creating suspend bedrock server instance\n");
+
     if (!startProcessSuspended()) {
         cleanup();
         return 1;
     }
+
+    printf("[PreLoader] Injecting ModLoader DLL\n");
 
     if (!allocateAndWriteRemoteDllPath()) {
         cleanup();
@@ -140,7 +144,9 @@ int main(void) {
         return 1;
     }
 
-    printf("DLL injected\n");
+    printf("[PreLoader] DLL successfully injected\n");
+
+    WaitForSingleObject(processInformation.hProcess, INFINITE);
     cleanup();
     return 0;
 }
