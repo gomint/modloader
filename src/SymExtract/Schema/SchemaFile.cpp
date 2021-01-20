@@ -293,7 +293,7 @@ namespace GoMint {
             writer.cont() << ";";
         }
 
-        writer.decreaseIndent().newline() << "}";
+        writer.decreaseIndent().newline() << "};";
     }
 
 
@@ -355,7 +355,7 @@ namespace GoMint {
             generateArgumentList(writer, func.m_symbol->m_arguments);
             writer.cont() << ");";
 
-            writer.decreaseIndent().newline() << "};";
+            writer.decreaseIndent().newline() << "}";
             writer.newline();
         }
     }
