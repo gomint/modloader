@@ -4,14 +4,11 @@
 // Stability: experimental
 //
 #include "extract.h"
-#include "Schema/Schema.h"
-//#include "Generator/Generator.h"
-
-#include "SymExtract/Helpers.h"
 
 #include <cstdio>
-#include <fstream>
 #include <unordered_map>
+
+#include <cxxopts.hpp>
 
 using namespace GoMint;
 
@@ -34,7 +31,79 @@ const char* g_usage =
         "\n"
         "  Example: symextract symbol_table.csv main.exe symbols.cpp"           "\n";
 
-bool readSchema(Schema& schema, const char* file) {
+
+cxxopts::Options g_optionDeclarations("symextract", "Extracts symbols from an executable or program debugging information and generates schematic glue code");
+std::unique_ptr<cxxopts::ParseResult> g_options;
+
+std::string g_schemaDefinitionFile;
+std::string g_symbolNameTableFile;
+std::string g_inputFile;
+std::string g_outputDirectory;
+std::string g_includePrefix;
+
+bool parseCommandLineArguments(int argc, char* argv[]) {
+    g_optionDeclarations.add_options()
+            ("s,schema", "The schema definition file ; same as <schema>", cxxopts::value<std::string>())
+            ("n,symbol-names", "The symbol name table file ; same as <symbol-names>", cxxopts::value<std::string>())
+            ("i,input-file", "The file to analyze ; same as <input-file>", cxxopts::value<std::string>())
+            ("o,output-directory", "Directory for generated files", cxxopts::value<std::string>()->default_value("."))
+            ("p,include-prefix", "Prefix for generated includes", cxxopts::value<std::string>()->default_value(""))
+            ("h,help", "Displays usage");
+
+    g_optionDeclarations.positional_help("<schema> <symbol-names> <input-file>");
+    g_optionDeclarations.show_positional_help();
+    g_optionDeclarations.parse_positional({"schema", "symbol-names", "input-file", "additional"});
+
+    try {
+        g_options = std::make_unique<cxxopts::ParseResult>(g_optionDeclarations.parse(argc, argv));
+    } catch (cxxopts::OptionException& e) {
+        printf("%s\n", e.what());
+        return false;
+    }
+
+    if (g_options->count("help")) {
+        printf("%s\n", g_optionDeclarations.help().c_str());
+        exit(0);
+    }
+
+    if (!g_options->count("schema")) {
+        printf("Missing schema definition file\n");
+        return false;
+    }
+    g_schemaDefinitionFile = (*g_options)["schema"].as<std::string>();
+
+    if (!g_options->count("symbol-names")) {
+        printf("Missing symbol name table file\n");
+        return false;
+    }
+    g_symbolNameTableFile = (*g_options)["symbol-names"].as<std::string>();
+
+    if (!g_options->count("input-file")) {
+        printf("Missing input file\n");
+        return false;
+    }
+    g_inputFile = (*g_options)["input-file"].as<std::string>();
+
+    if (g_options->count("output-directory")) {
+        g_outputDirectory = (*g_options)["output-directory"].as<std::string>();
+    } else {
+        g_outputDirectory = ".";
+    }
+
+    if (g_options->count("include-prefix")) {
+        g_includePrefix = (*g_options)["include-prefix"].as<std::string>();
+    } else {
+        g_includePrefix = "";
+    }
+
+    if (!g_includePrefix.empty() && g_includePrefix[g_includePrefix.length() - 1] != '/') {
+        g_includePrefix += '/';
+    }
+
+    return true;
+}
+
+bool readSchema(Schema& schema, const std::string& file) {
     std::filesystem::path path(file);
     if (!std::filesystem::exists(path)) {
         printf("Schema file does not exist\n");
@@ -49,7 +118,7 @@ bool readSchema(Schema& schema, const char* file) {
     return schema.loadFile(file);
 }
 
-bool readSymbolNames(Schema& schema, const char* file) {
+bool readSymbolNames(Schema& schema, const std::string& file) {
     std::filesystem::path path(file);
     if (!std::filesystem::exists(path)) {
         printf("Symbol names file does not exist\n");
@@ -64,86 +133,26 @@ bool readSymbolNames(Schema& schema, const char* file) {
     return schema.loadSymbolNames(path);
 }
 
-//bool checkSymbolAddresses(const Schema& definitions) {
-//    bool foundAllAddresses = true;
-//
-//    for (auto& it : definitions.m_symbolDeclsByName) {
-//        Symbol& symbol = *(it.second);
-//
-//        if (symbol.m_addressOffset == 0) {
-//            foundAllAddresses = false;
-//            printf("%p: %s (missing)\n", (void*) symbol.m_addressOffset, symbol.m_name.c_str());
-//        } else {
-//            printf("%p: %s (found)\n", (void*) symbol.m_addressOffset, symbol.m_name.c_str());
-//        }
-//    }
-//
-//    return foundAllAddresses;
-//}
-
-//bool generateHeader(const char* file) {
-//    std::string headerFile = std::string(file) + ".h";
-//    std::ofstream outfile(headerFile);
-//    if (!outfile) {
-//        printf("Could not open header file for generation\n");
-//        return false;
-//    }
-//
-//    outfile << "#ifndef __SYMEXTRACT_GENERATED_HEADER__\n";
-//    outfile << "#define __SYMEXTRACT_GENERATED_HEADER__\n\n";
-//
-//    outfile << "namespace GoMint { namespace Symbols {\n\n";
-//
-//    for (auto& it : g_symbolTable) {
-//        Symbol& symbol = it.second;
-//
-//        outfile << "\ttypedef " << symbol.m_pointerTypeDecl << ";\n";
-//        outfile << "\textern " << symbol.m_pointerType << " " << symbol.m_pointerVar << ";\n";
-//        outfile << "\n";
-//    }
-//
-//    outfile << "\tbool loadSymbols();\n\n";
-//
-//    outfile << "} }\n\n";
-//
-//    outfile << "#endif // __SYMEXTRACT_GENERATED_HEADER__\n";
-//
-//    return true;
-//}
-//
-//bool generateGlueCode(const char* file) {
-//    return generateHeader(file) && generateLoader(g_symbolTable, file);
-//}
-
 
 int main(int argc, char* argv[]) {
-    if (argc != 5 && argc != 6) {
-        printf("%s", g_usage);
+    if (!parseCommandLineArguments(argc, argv)) {
+        printf("%s\n", g_optionDeclarations.help().c_str());
         return 1;
-    }
-
-    const char* schemaPath = argv[1];
-    const char* symbolTablePath = argv[2];
-    const char* inputPath = argv[3];
-    const char* outputFolder = argv[4];
-    std::string includePrefix = argc >= 6 ? argv[5] : "";
-    if (!includePrefix.empty() && includePrefix[includePrefix.length() - 1] != '/') {
-        includePrefix += '/';
     }
 
     Schema schema;
 
-    if (!readSchema(schema, schemaPath)) {
+    if (!readSchema(schema, g_schemaDefinitionFile)) {
         printf("Failed to read definition table\n");
         return 1;
     }
 
-    if (!readSymbolNames(schema, symbolTablePath)) {
+    if (!readSymbolNames(schema, g_symbolNameTableFile)) {
         printf("Failed to read symbol names table\n");
         return 1;
     }
 
-    if (!extractSymbols(schema, inputPath)) {
+    if (!extractSymbols(schema, g_inputFile)) {
         printf("Failed to extract symbols\n");
         return 1;
     }
@@ -153,7 +162,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    if (!schema.generate(outputFolder, includePrefix)) {
+    if (!schema.generate(g_outputDirectory, g_includePrefix)) {
         printf("Generation failed\n");
         return 1;
     }

@@ -42,7 +42,8 @@ namespace GoMint {
     bool loadInputModule(ModuleInfo* module, const char* file) {
         DWORD64 baseAddress = SymLoadModuleEx(module->m_hProcess, NULL, file, NULL, module->m_dwBaseAddress,
                                               0x7FFFFFFFUL, NULL, 0);
-        if (baseAddress == 0 && GetLastError() != ERROR_SUCCESS) {
+        DWORD error = GetLastError();
+        if (baseAddress == 0 && error != ERROR_SUCCESS) {
             return false;
         }
         module->m_dwBaseAddress = baseAddress;
@@ -84,7 +85,7 @@ namespace GoMint {
         return SymUnloadModule64(module->m_hProcess, module->m_dwBaseAddress) == TRUE;
     }
 
-    bool extractSymbols(Schema& schema, const char* inputFile) {
+    bool extractSymbols(Schema& schema, const std::string& inputFile) {
         ModuleInfo module;
         module.m_schema = &schema;
 
@@ -93,7 +94,7 @@ namespace GoMint {
             return false;
         }
 
-        if (!loadInputModule(&module, inputFile)) {
+        if (!loadInputModule(&module, inputFile.c_str())) {
             printf("Failed to load input module\n");
             return false;
         }

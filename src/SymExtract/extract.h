@@ -11,7 +11,7 @@
 
 namespace GoMint {
 
-    bool extractSymbols(Schema& schema, const char* file);
+    bool extractSymbols(Schema& schema, const std::string& file);
 
 }
 
