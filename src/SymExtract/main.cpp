@@ -4,7 +4,8 @@
 // Stability: experimental
 //
 #include "extract.h"
-#include "Generator/Generator.h"
+#include "Schema/Schema.h"
+//#include "Generator/Generator.h"
 
 #include "SymExtract/Helpers.h"
 
@@ -33,35 +34,52 @@ const char* g_usage =
         "\n"
         "  Example: symextract symbol_table.csv main.exe symbols.cpp"           "\n";
 
-bool readDefinitionTable(DefinitionTable& definitions, const char* file) {
-    std::ifstream infile(file);
-    if (!infile) {
+bool readSchema(Schema& schema, const char* file) {
+    std::filesystem::path path(file);
+    if (!std::filesystem::exists(path)) {
+        printf("Schema file does not exist\n");
         return false;
     }
 
-    nlohmann::json j;
-    infile >> j;
-
-    definitions = j.get<GoMint::DefinitionTable>();
-    return true;
-}
-
-bool checkSymbolAddresses(const DefinitionTable& definitions) {
-    bool foundAllAddresses = true;
-
-    for (auto& it : definitions.m_symbolDeclsByName) {
-        SymbolDecl& symbol = *(it.second);
-
-        if (symbol.m_addressOffset == 0) {
-            foundAllAddresses = false;
-            printf("%p: %s (missing)\n", (void*) symbol.m_addressOffset, symbol.m_name.c_str());
-        } else {
-            printf("%p: %s (found)\n", (void*) symbol.m_addressOffset, symbol.m_name.c_str());
-        }
+    if (!std::filesystem::is_regular_file(path)) {
+        printf("Schema file is not a regular file\n");
+        return false;
     }
 
-    return foundAllAddresses;
+    return schema.loadFile(file);
 }
+
+bool readSymbolNames(Schema& schema, const char* file) {
+    std::filesystem::path path(file);
+    if (!std::filesystem::exists(path)) {
+        printf("Symbol names file does not exist\n");
+        return false;
+    }
+
+    if (!std::filesystem::is_regular_file(path)) {
+        printf("Symbol names file is not a regular file\n");
+        return false;
+    }
+
+    return schema.loadSymbolNames(path);
+}
+
+//bool checkSymbolAddresses(const Schema& definitions) {
+//    bool foundAllAddresses = true;
+//
+//    for (auto& it : definitions.m_symbolDeclsByName) {
+//        Symbol& symbol = *(it.second);
+//
+//        if (symbol.m_addressOffset == 0) {
+//            foundAllAddresses = false;
+//            printf("%p: %s (missing)\n", (void*) symbol.m_addressOffset, symbol.m_name.c_str());
+//        } else {
+//            printf("%p: %s (found)\n", (void*) symbol.m_addressOffset, symbol.m_name.c_str());
+//        }
+//    }
+//
+//    return foundAllAddresses;
+//}
 
 //bool generateHeader(const char* file) {
 //    std::string headerFile = std::string(file) + ".h";
@@ -99,36 +117,44 @@ bool checkSymbolAddresses(const DefinitionTable& definitions) {
 
 
 int main(int argc, char* argv[]) {
-    if (argc != 4) {
+    if (argc != 5 && argc != 6) {
         printf("%s", g_usage);
         return 1;
     }
 
-    const char* symbolTablePath = argv[1];
-    const char* inputPath = argv[2];
-    const char* outputPath = argv[3];
+    const char* schemaPath = argv[1];
+    const char* symbolTablePath = argv[2];
+    const char* inputPath = argv[3];
+    const char* outputFolder = argv[4];
+    std::string includePrefix = argc >= 6 ? argv[5] : "";
+    if (!includePrefix.empty() && includePrefix[includePrefix.length() - 1] != '/') {
+        includePrefix += '/';
+    }
 
-    DefinitionTable definitions;
+    Schema schema;
 
-    if (!readDefinitionTable(definitions, symbolTablePath)) {
+    if (!readSchema(schema, schemaPath)) {
         printf("Failed to read definition table\n");
         return 1;
     }
 
-    if (!extractSymbols(definitions, inputPath)) {
+    if (!readSymbolNames(schema, symbolTablePath)) {
+        printf("Failed to read symbol names table\n");
+        return 1;
+    }
+
+    if (!extractSymbols(schema, inputPath)) {
         printf("Failed to extract symbols\n");
         return 1;
     }
 
-    if (!checkSymbolAddresses(definitions)) {
-        printf("Could not resolve all symbol addresses\n");
+    if (!schema.validate(true)) {
+        printf("Missing one or more symbols ; aborting\n");
         return 1;
     }
 
-    Generator generator;
-    std::string baseFile(outputPath);
-    if (!generator.run(definitions, baseFile + ".h", baseFile + ".cpp")) {
-        printf("Glue code generation failed\n");
+    if (!schema.generate(outputFolder, includePrefix)) {
+        printf("Generation failed\n");
         return 1;
     }
 

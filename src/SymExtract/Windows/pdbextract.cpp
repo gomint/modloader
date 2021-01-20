@@ -6,7 +6,7 @@
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "modernize-use-nullptr"
 
-#include "../Generator/DefinitionTable.h"
+#include "../extract.h"
 
 #include <cstdio>
 #include <cstring>
@@ -20,7 +20,7 @@
 namespace GoMint {
 
     struct ModuleInfo {
-        GoMint::DefinitionTable* m_definitions = NULL;
+        Schema* m_schema = NULL;
 
         HANDLE m_hProcess = NULL;
         DWORD64 m_dwBaseAddress = 0x100000ULL;
@@ -53,7 +53,7 @@ namespace GoMint {
         (void) symbolSize;
 
         auto* module = reinterpret_cast<ModuleInfo*>(userContext);
-        GoMint::DefinitionTable& definitions = *module->m_definitions;
+        Schema& schema = *module->m_schema;
 
         // Retrieve symbol name
         if (pSymInfo->MaxNameLen == 0) {
@@ -65,13 +65,13 @@ namespace GoMint {
         std::memcpy(&module->m_nameBuffer[0], pSymInfo->Name, pSymInfo->NameLen * sizeof(CHAR));
         std::string symbolName(&module->m_nameBuffer[0], pSymInfo->NameLen);
 
-        auto find = definitions.m_symbolDeclsByName.find(symbolName);
-        if (find == definitions.m_symbolDeclsByName.end()) {
+        Symbol* symbol = schema.findSymbolByLookup(symbolName);
+        if (symbol == nullptr) {
             // Not interested in this symbol
             return TRUE;
         }
 
-        find->second->m_addressOffset = pSymInfo->Address - pSymInfo->ModBase;
+        symbol->m_addressOffset = pSymInfo->Address - pSymInfo->ModBase;
         return TRUE;
     }
 
@@ -84,9 +84,9 @@ namespace GoMint {
         return SymUnloadModule64(module->m_hProcess, module->m_dwBaseAddress) == TRUE;
     }
 
-    bool extractSymbols(GoMint::DefinitionTable& definitions, const char* inputFile) {
+    bool extractSymbols(Schema& schema, const char* inputFile) {
         ModuleInfo module;
-        module.m_definitions = &definitions;
+        module.m_schema = &schema;
 
         if (!initializeDbgHelp(&module)) {
             printf("Failed to initialize DbgHelp library\n");

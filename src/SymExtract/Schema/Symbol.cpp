@@ -4,23 +4,23 @@
 // Stability: experimental
 //
 
-#include "SymbolDecl.h"
+#include "Symbol.h"
 
-#include "SymbolMemberFunctionDecl.h"
+#include "MemberFunctionSymbol.h"
 
 namespace GoMint {
 
-    void to_json(nlohmann::json& j, const GoMint::SymbolDecl& p) {
+    void to_json(nlohmann::json& j, const GoMint::Symbol& p) {
         j["name"] = p.m_name;
         j["type"] = p.m_type;
-        j["ptrname"] = p.m_pointerName;
+        j["ptrtype"] = p.m_pointerType;
         j["varname"] = p.m_variableName;
     }
 
-    void from_json(const nlohmann::json& j, GoMint::SymbolDecl& p) {
+    void from_json(const nlohmann::json& j, GoMint::Symbol& p) {
         j.at("name").get_to(p.m_name);
         j.at("type").get_to(p.m_type);
-        j.at("ptrname").get_to(p.m_pointerName);
+        j.at("ptrtype").get_to(p.m_pointerType);
         j.at("varname").get_to(p.m_variableName);
     }
 

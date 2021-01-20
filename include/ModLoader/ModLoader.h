@@ -51,7 +51,6 @@ namespace GoMint {
          * Fields
          */
         funchook_t* m_hooks;
-        SymExtract::SymbolTable m_symbolTable;
         SymExtract::DedicatedServer* m_dedicatedServer;
 
         /*

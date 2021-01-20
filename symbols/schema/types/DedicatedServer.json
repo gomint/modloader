@@ -1,0 +1,33 @@
+{
+    "accessibility": "public",
+    "filename": "Types/DedicatedServer",
+    "includes": [
+        "<string>"
+    ],
+    "type": {
+        "name": "DedicatedServer",
+        "funcs": [],
+        "memfuncs": [
+            {
+                "name": "start",
+                "symbol": "DedicatedServer::start"
+            }
+        ]
+    },
+    "symbols": [
+        {
+            "name": "DedicatedServer::start",
+            "type": "memfunc",
+            "ptrtype": "DedicatedServer_start_funcptr",
+            "varname": "g_DedicatedServer_start",
+            "inheritance": "single",
+            "ret": "void",
+            "args": [
+                {
+                    "type": "const std::string&",
+                    "name": "sessionID"
+                }
+            ]
+        }
+    ]
+}

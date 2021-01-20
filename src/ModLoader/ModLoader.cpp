@@ -5,6 +5,8 @@
 //
 #include <ModLoader/ModLoader.h>
 
+#include <SymExtract/Types/DedicatedServer.h>
+
 namespace GoMint {
 
     std::unique_ptr<ModLoader> ModLoader::k_modLoader;
@@ -18,11 +20,10 @@ namespace GoMint {
     }
 
     bool ModLoader::initialize() {
-        if (!SymExtract::loadSymbols(&m_symbolTable)) {
+        if (!SymExtract::loadSymbols()) {
             printf("[ModLoader] Failed to load native symbols\n");
             return false;
         }
-        SymExtract::installTypes(&m_symbolTable);
         printf("[ModLoader] Loaded native symbols\n");
 
         if (!installHooks()) {
@@ -39,7 +40,7 @@ namespace GoMint {
 
         int result;
 
-        m_DedicatedServer_Start = reinterpret_cast<DedicatedServer_Start>(SymExtract::retrieveFunctionAddress(m_symbolTable.DedicatedServer_start_ptr));
+        m_DedicatedServer_Start = reinterpret_cast<DedicatedServer_Start>(SymExtract::retrieveFunctionAddress(SymExtract::g_DedicatedServer_start));
         result = funchook_prepare(m_hooks, (void**) &m_DedicatedServer_Start, (void*) &hook_DedicatedServer_start);
         if (result != 0) {
             printf("[ModLoader] Failed to prepare hook into DedicatedServer::start()\n");

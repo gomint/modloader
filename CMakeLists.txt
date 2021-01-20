@@ -8,6 +8,10 @@ set(CMAKE_C_STANDARD 99)
 set(MODLOADER_BEDROCK_PDB "${PROJECT_SOURCE_DIR}/symbols/bedrock_server.pdb" CACHE FILEPATH "Please specify the path to your bedrock_server.pdb file")
 
 #
+# SymExtract Configuration
+#
+
+#
 # Target Declarations
 #
 add_executable(SymExtract)
@@ -48,14 +52,14 @@ endif ()
 # Generation
 #
 if (WIN32)
-    file(MAKE_DIRECTORY ${PROJECT_SOURCE_DIR}/symbols/SymExtract)
-    add_custom_command(
-        OUTPUT ${PROJECT_SOURCE_DIR}/symbols/SymExtract/Symbols.h ${PROJECT_SOURCE_DIR}/symbols/SymExtract/Symbols.cpp
-        COMMAND SymExtract ${PROJECT_SOURCE_DIR}/symbols/symbols_win32.json ${MODLOADER_BEDROCK_PDB} ${PROJECT_SOURCE_DIR}/symbols/SymExtract/Symbols
-        DEPENDS SymExtract
-    )
+    file(MAKE_DIRECTORY ${PROJECT_SOURCE_DIR}/symbols/extracted)
+    #add_custom_command(
+    #    OUTPUT ${PROJECT_SOURCE_DIR}/symbols/SymExtract/Symbols.h ${PROJECT_SOURCE_DIR}/symbols/SymExtract/Symbols.cpp
+    #    COMMAND SymExtract ${PROJECT_SOURCE_DIR}/symbols/symbolnames_win32.json ${MODLOADER_BEDROCK_PDB} ${PROJECT_SOURCE_DIR}/symbols/SymExtract/Symbols
+    #    DEPENDS SymExtract
+    #)
 
-    target_sources(ModLoader PRIVATE ${PROJECT_SOURCE_DIR}/symbols/SymExtract/Symbols.h ${PROJECT_SOURCE_DIR}/symbols/SymExtract/Symbols.cpp)
+    #target_sources(ModLoader PRIVATE ${PROJECT_SOURCE_DIR}/symbols/SymExtract/Symbols.h ${PROJECT_SOURCE_DIR}/symbols/SymExtract/Symbols.cpp)
     target_include_directories(ModLoader PRIVATE ${PROJECT_SOURCE_DIR}/symbols)
 endif ()
 

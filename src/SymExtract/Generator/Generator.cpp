@@ -18,13 +18,13 @@ namespace GoMint {
 
     }
 
-    bool Generator::run(const DefinitionTable& definitions,
+    bool Generator::run(const Schema& definitions,
                         const std::string& headerFile,
                         const std::string& sourceFile) {
         return generateHeader(definitions, headerFile) && generateSource(definitions, headerFile, sourceFile);
     }
 
-    bool Generator::generateHeader(const DefinitionTable& definitions, const std::string& headerFile) {
+    bool Generator::generateHeader(const Schema& definitions, const std::string& headerFile) {
         ofstream out(headerFile);
         if (!out) {
             return false;
@@ -61,7 +61,7 @@ namespace GoMint {
         return true;
     }
 
-    void Generator::generateHeaderIncludes(const DefinitionTable& definitionTable, ofstream& out) {
+    void Generator::generateHeaderIncludes(const Schema& definitionTable, ofstream& out) {
         out << endl;
         for (const auto& include : definitionTable.m_includes) {
             out << m_indent << "#include " << include << endl;
@@ -69,7 +69,7 @@ namespace GoMint {
         out << endl;
     }
 
-    void Generator::generateHeaderForwardDeclarations(const DefinitionTable& definitions, ofstream& out) {
+    void Generator::generateHeaderForwardDeclarations(const Schema& definitions, ofstream& out) {
         out << m_indent << "//" << endl;
         out << m_indent << "// Forward Declarations" << endl;
         out << m_indent << "//" << endl;
@@ -87,7 +87,7 @@ namespace GoMint {
                 case SymbolType::MemberFunction:
                     // Typedef
                     out << m_indent << "typedef ";
-                    generateFunctionPointerDecl(out, *reinterpret_cast<SymbolFunctionDecl*>(symbol.get()),
+                    generateFunctionPointerDecl(out, *reinterpret_cast<FunctionSymbol*>(symbol.get()),
                                                 symbol->m_pointerName);
                     out << ";" << endl;
                     break;
@@ -100,7 +100,7 @@ namespace GoMint {
         out << endl;
     }
 
-    void Generator::generateHeaderTypes(const DefinitionTable& definitions, ofstream& out) {
+    void Generator::generateHeaderTypes(const Schema& definitions, ofstream& out) {
         out << m_indent << "//" << endl;
         out << m_indent << "// Type Declarations" << endl;
         out << m_indent << "//" << endl;
@@ -114,10 +114,10 @@ namespace GoMint {
             for (auto& memfuncDecl : decl.m_memberFunctions) {
                 auto symbolDecl = definitions.m_symbolDeclsByName.find(memfuncDecl.m_symbol);
                 if (symbolDecl != definitions.m_symbolDeclsByName.end()) {
-                    SymbolDecl* symbol = symbolDecl->second;
+                    Symbol* symbol = symbolDecl->second;
                     if (symbol->m_type == SymbolType::MemberFunction) {
                         generateHeaderMemberFunction(definitions, out, decl, memfuncDecl,
-                                                     *reinterpret_cast<SymbolMemberFunctionDecl*>(symbol));
+                                                     *reinterpret_cast<MemberFunctionSymbol*>(symbol));
                     }
                 }
             }
@@ -129,9 +129,9 @@ namespace GoMint {
         out << endl;
     }
 
-    void Generator::generateHeaderMemberFunction(const DefinitionTable& definitionTable, std::ofstream& out,
-                                                 const TypeDecl& type, const MemberFunctionDecl& memfunc,
-                                                 const SymbolMemberFunctionDecl& symbol) {
+    void Generator::generateHeaderMemberFunction(const Schema& definitionTable, std::ofstream& out,
+                                                 const Type& type, const MemberFunction& memfunc,
+                                                 const MemberFunctionSymbol& symbol) {
         // Generate member function pointer
         std::string memfunptr = memfunc.m_name + "_ptr";
         out << m_indent << "static " << symbol.m_pointerName << " " << memfunptr << ";" << endl;
@@ -144,7 +144,7 @@ namespace GoMint {
         out << ";" << endl;
     }
 
-    void Generator::generateHeaderSymbols(const DefinitionTable& definitions, std::ofstream& out) {
+    void Generator::generateHeaderSymbols(const Schema& definitions, std::ofstream& out) {
         out << m_indent << "//" << endl;
         out << m_indent << "// Symbols" << endl;
         out << m_indent << "//" << endl;
@@ -171,7 +171,7 @@ namespace GoMint {
 
     }
 
-    bool Generator::generateSource(const DefinitionTable& definitions, const std::string& headerFile,
+    bool Generator::generateSource(const Schema& definitions, const std::string& headerFile,
                                    const std::string& sourceFile) {
         ofstream out(sourceFile);
         if (!out) {
@@ -204,7 +204,7 @@ namespace GoMint {
         return true;
     }
 
-    void Generator::generateSourceTypes(const DefinitionTable& definitions, std::ofstream& out) {
+    void Generator::generateSourceTypes(const Schema& definitions, std::ofstream& out) {
         out << m_indent << "//" << endl;
         out << m_indent << "// Types" << endl;
         out << m_indent << "//" << endl;
@@ -217,7 +217,7 @@ namespace GoMint {
                     auto& symbol = *(it->second);
                     if (symbol.m_type != SymbolType::MemberFunction) continue;
 
-                    auto& memsymbol = *reinterpret_cast<const SymbolMemberFunctionDecl*>(&symbol);
+                    auto& memsymbol = *reinterpret_cast<const MemberFunctionSymbol*>(&symbol);
 
                     out << m_indent << symbol.m_pointerName << " " << type.m_name << "::" << memfunc.m_name << "_ptr = nullptr;" << endl;
                     out << m_indent << memsymbol.m_returnType << " " << type.m_name << "::" << memfunc.m_name;
@@ -251,7 +251,7 @@ namespace GoMint {
         out << endl;
     }
 
-    void Generator::generateSourceLoadSymbols(const DefinitionTable& definitions, std::ofstream& out) {
+    void Generator::generateSourceLoadSymbols(const Schema& definitions, std::ofstream& out) {
         out << m_indent << "//" << endl;
         out << m_indent << "// Symbols" << endl;
         out << m_indent << "//" << endl;
@@ -290,12 +290,12 @@ namespace GoMint {
         out << endl;
     }
 
-    void Generator::generateMemberFunctionInvocable(ofstream& out, const SymbolMemberFunctionDecl& symbol) const {
+    void Generator::generateMemberFunctionInvocable(ofstream& out, const MemberFunctionSymbol& symbol) const {
         switch (symbol.m_inheritance) {
-            case SymbolMemberFunctionInheritance::Single:
+            case TypeInheritance::Single:
                 out << "SingleInvocable";
                 break;
-            case SymbolMemberFunctionInheritance::Multi:
+            case TypeInheritance::Multi:
                 out << "MultiInvocable";
                 break;
             default:
@@ -304,12 +304,12 @@ namespace GoMint {
         }
     }
 
-    void Generator::generateFunctionPointerDecl(std::ofstream& out, const SymbolFunctionDecl& function, const std::string& varname) {
+    void Generator::generateFunctionPointerDecl(std::ofstream& out, const FunctionSymbol& function, const std::string& varname) {
         out << function.m_returnType
             << " (";
 
         if (function.m_type == SymbolType::MemberFunction) {
-            const auto& memfunc = *reinterpret_cast<const SymbolMemberFunctionDecl*>(&function);
+            const auto& memfunc = *reinterpret_cast<const MemberFunctionSymbol*>(&function);
             generateMemberFunctionInvocable(out, memfunc);
             out << "::";
         }
@@ -318,7 +318,7 @@ namespace GoMint {
         generateFunctionArgumentList(out, function, false);
     }
 
-    void Generator::generateFunctionArgumentList(ofstream& out, const SymbolFunctionDecl& function, bool named) {
+    void Generator::generateFunctionArgumentList(ofstream& out, const FunctionSymbol& function, bool named) {
         out << "(";
         int argc = 0;
         for (auto it = function.m_argumentTypes.begin(); it != function.m_argumentTypes.end(); ++it) {

@@ -3,6 +3,8 @@ target_sources(ModLoader
         ModLoader.cpp
         ModLoaderEntry.cpp
         ModLoaderEntry.h
+        ../SymExtract/Symbols.cpp
+        ../SymExtract/Types/DedicatedServer.cpp
 )
 
 if (WIN32)

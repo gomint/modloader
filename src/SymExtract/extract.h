@@ -7,11 +7,11 @@
 #ifndef MODLOADER_EXTRACT_H
 #define MODLOADER_EXTRACT_H
 
-#include "Generator/DefinitionTable.h"
+#include "Schema/Schema.h"
 
 namespace GoMint {
 
-    bool extractSymbols(DefinitionTable& definitions, const char* file);
+    bool extractSymbols(Schema& schema, const char* file);
 
 }
 

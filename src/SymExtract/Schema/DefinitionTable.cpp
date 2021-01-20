@@ -3,10 +3,10 @@
 // Version 1.0.0
 // Stability: experimental
 //
-#include "DefinitionTable.h"
+#include "Schema.h"
 
-#include "SymbolFunctionDecl.h"
-#include "SymbolMemberFunctionDecl.h"
+#include "FunctionSymbol.h"
+#include "MemberFunctionSymbol.h"
 
 namespace nlohmann {
     template<>
