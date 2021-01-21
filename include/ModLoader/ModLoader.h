@@ -20,7 +20,7 @@ namespace GoMint {
     /**
      * Enumeration of allowed result values during mod loading.
      */
-    enum class ModLoadResult : unsigned int {
+    enum class ModActivationResult : unsigned int {
 
         Success = 0,
         Failed
@@ -34,6 +34,48 @@ namespace GoMint {
         std::uint32_t m_major;
         std::uint32_t m_minor;
         std::uint32_t m_patch;
+
+        /**
+         * Checks whether or not this version is compatible towards the specified version.
+         * Two versions are considered compatible iff their major versions are identical and
+         * the minor version of this version is at least as high as that of other. Note that
+         * the latter requirement makes this check non-commutative.
+         *
+         * @param other The version to check compatibility with
+         * @return Whether or not this version is compatible with other
+         */
+        inline bool isCompatible(const SemanticVersion& other) const {
+            return (m_major == other.m_major && m_minor >= other.m_minor);
+        }
+
+        inline bool operator==(const SemanticVersion& o) const {
+            return m_major == o.m_major && m_minor == o.m_minor && m_patch == o.m_patch;
+        }
+        inline bool operator!=(const SemanticVersion& o) const {
+            return !(*this == o);
+        }
+        inline bool operator<(const SemanticVersion& o) const {
+            if (m_major > o.m_major) return false;
+            if (m_major < o.m_major) return true;
+            if (m_minor > o.m_minor) return false;
+            if (m_minor < o.m_minor) return true;
+            if (m_patch < o.m_patch) return true;
+            return false;
+        }
+        inline bool operator>(const SemanticVersion& o) const {
+            if (m_major < o.m_major) return false;
+            if (m_major > o.m_major) return true;
+            if (m_minor < o.m_minor) return false;
+            if (m_minor > o.m_minor) return true;
+            if (m_patch > o.m_patch) return true;
+            return false;
+        }
+        inline bool operator<=(const SemanticVersion& o) const {
+            return (*this == o) || (*this < o);
+        }
+        inline bool operator>=(const SemanticVersion& o) const {
+            return (*this == o) || (*this > o);
+        }
     };
 
     /**
@@ -46,7 +88,6 @@ namespace GoMint {
         static constexpr std::size_t   MAX_AUTHOR_LENGTH      = 255;
         static constexpr std::size_t   MAX_DESCRIPTION_LENGTH = 255;
 
-        std::uint32_t   m_structureVersion;
         std::uint8_t    m_uuid[16];
         SemanticVersion m_version;
         SemanticVersion m_modLoaderVersion;
@@ -98,12 +139,8 @@ namespace GoMint {
 
     public:
 
-        /** @return The installed modloader's major version */
-        virtual int getMajorVersion() = 0;
-        /** @return The installed modloader's minor version */
-        virtual int getMinorVersion() = 0;
-        /** @return The installed modloader's patch version */
-        virtual int getPatchVersion() = 0;
+        /** @return The installed modloader's version */
+        virtual SemanticVersion getVersion() const = 0;
 
     };
 

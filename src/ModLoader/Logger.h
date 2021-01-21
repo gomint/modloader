@@ -13,11 +13,24 @@
 
 namespace GoMint {
 
+    /**
+     * Helper class which provides logging capabilities to Mods.
+     *
+     * @author Ciel DeVille
+     * @version 1.0.0
+     * @stability unstable
+     */
     class Logger : public ILogger {
 
     public:
 
-        Logger(std::shared_ptr<spdlog::logger> logger);
+        /**
+         * Constructs a new logger given the underlying spdlog logger it should redirect its
+         * output into.
+         *
+         * @param logger The logger to redirect output to
+         */
+        explicit Logger(std::shared_ptr<spdlog::logger> logger);
 
         void log(LogLevel level, const std::string& msg) override;
         void trace(const std::string& msg) override;

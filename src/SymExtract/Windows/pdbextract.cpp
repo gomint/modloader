@@ -105,7 +105,7 @@ namespace GoMint {
         }
 
         if (!unloadInputModule(&module)) {
-            printf("Failed to unload input module\n");
+            printf("Failed to deactivate input module\n");
             return false;
         }
 

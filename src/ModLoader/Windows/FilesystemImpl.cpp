@@ -3,13 +3,13 @@
 // Version 1.0.0
 // Stability: experimental
 //
-#include <ModLoader/Windows/Filesystem.h>
+#include <ModLoader/Windows/FilesystemImpl.h>
 
 #include <Windows.h>
 
-namespace GoMint {
+namespace GoMint::Native {
 
-    bool Filesystem::isDirectory(const std::string& directory) {
+    bool FilesystemImpl::isDirectory(const std::string& directory) {
         DWORD attribs = GetFileAttributesA(directory.c_str());
         if (attribs == INVALID_FILE_ATTRIBUTES) {
             return false;
@@ -17,12 +17,12 @@ namespace GoMint {
         return (attribs & FILE_ATTRIBUTE_DIRECTORY) != 0;
     }
 
-    bool Filesystem::createDirectory(const std::string& directory) {
+    bool FilesystemImpl::createDirectory(const std::string& directory) {
         BOOL result = CreateDirectoryA(directory.c_str(), NULL);
         return (result != FALSE);
     }
 
-    std::vector<std::string> Filesystem::listDLLsInDirectory(const std::string& directory) {
+    std::vector<std::string> FilesystemImpl::listSharedLibraries(const std::string& directory) {
         WIN32_FIND_DATA ffd;
         std::string wildcard = directory + "\\*.dll";
 
@@ -42,7 +42,7 @@ namespace GoMint {
         return files;
     }
 
-    std::string Filesystem::getAbsolutePath(const std::string& path) {
+    std::string FilesystemImpl::getAbsolutePath(const std::string& path) {
         std::vector<char> buffer;
         DWORD result = MAX_PATH + 1;
         do {

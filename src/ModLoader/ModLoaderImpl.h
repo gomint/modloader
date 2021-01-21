@@ -29,21 +29,40 @@ namespace GoMint {
     public:
 
         /**
-         * Invoked once per process by the platform-dependent entry point. Should initialize the ModLoader.
+         * Invoked once per process by the platform-dependent entry point. Should initialize the static components
+         * of the ModLoader. Since this function will be invoked from the DllMain function on Windows it is very
+         * limited on what it can actually do without leading to deadlocks. Basically, it is only supposed to provide
+         * the minimum amount of setup required to hook into the server's startup routine to be invoked again at a
+         * later time from outside of DllMain.
          *
          * @return Whether or not initialization succeeded
          */
         static bool initializeStatically();
 
+        /**
+         * Invoked once the server is starting up. This initialization routine will be invoked from outside
+         * DllMain which allows it to do all further setup required.
+         *
+         * @param server The DedicatedServer instance the mod loader has hijacked
+         * @param sessionId The session ID passed to DedicatedServer::start as a parameter.
+         * @return
+         */
         bool initialize(SymExtract::DedicatedServer* server, const std::string& sessionId);
+
+        /** @return The mod loader's own logger instance */
+        spdlog::logger* getLogger() const;
+        /**
+         * Creates a new logger with the specified name and binds it to all configured logging sinks.
+         *
+         * @param name The name for the logger (should not exceed 15 characters)
+         * @return The newly created logger
+         */
         LoggerPtr createLogger(const std::string& name);
 
         //
         // Public API
         //
-        int getMajorVersion() override;
-        int getMinorVersion() override;
-        int getPatchVersion() override;
+        SemanticVersion getVersion() const override;
 
     private:
         //
@@ -59,6 +78,7 @@ namespace GoMint {
         static ModLoader k_instance;
         static const char* k_logPattern;
         static spdlog::level::level_enum k_logLevel;
+        static std::string k_modDirectory;
 
         //
         // Fields
@@ -74,9 +94,13 @@ namespace GoMint {
 
         ModLoader() noexcept;
 
+        /** Static Initialization: installs required hooks */
         bool installHooks();
+        /** Dynamic Initializtion: initializes logging system */
         bool initializeLogging();
+        /** Dynamic Initialization: configures the logger and binds it to available logging sinks */
         void prepareLogger(spdlog::logger* logger);
+        /** Dynamic Initialization: searches for mods */
         bool searchForMods();
 
     };

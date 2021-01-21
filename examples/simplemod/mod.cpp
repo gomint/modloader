@@ -14,6 +14,14 @@ extern "C" {
 
     GoMint::ILogger* g_logger;
 
+    /**
+     * Invoked by the ModLoader when first loading the mod into memory.
+     *
+     * @return The version of the ModInformation structure this mod will fill out
+     */
+    MOD_API std::uint32_t MOD_CALL get_mod_information_version() {
+        return GoMint::ModInformation::STRUCTURE_VERSION;
+    }
 
     /**
      * Invoked by the ModLoader when first reading this DLL file.
@@ -21,24 +29,23 @@ extern "C" {
      * @param info An information structure for the mod to fill out
      */
     MOD_API void MOD_CALL get_mod_information(GoMint::ModInformation* info) {
-        info->m_structureVersion = GoMint::ModInformation::STRUCTURE_VERSION;
         std::memcpy(info->m_uuid, SIMPLEMOD_UUID, 16);
         info->m_version = SIMPLEMOD_VERSION;
-        info->m_modLoaderVersion = { 0, 1, 0 };
-        std::memcpy(info->m_longName, "SimpleMod", 10);
-        std::memcpy(info->m_shortName, "SimpleMod", 10);
-        std::memcpy(info->m_author, "Ciel DeVille", 13);
-        std::memcpy(info->m_description, "-/-", 4);
+        info->m_modLoaderVersion = MODLOADER_VERSION;
+        strcpy_s(info->m_longName, "Simple Modding Example");
+        strcpy_s(info->m_shortName, "SimpleMod");
+        strcpy_s(info->m_author, "Ciel DeVille");
+        strcpy_s(info->m_description, "A simple modification that shows how the mod loader works.");
     }
 
-    MOD_API GoMint::ModLoadResult MOD_CALL on_mod_load(GoMint::IModLoader* loader, GoMint::ILogger* logger) {
+    MOD_API GoMint::ModActivationResult MOD_CALL on_mod_activate(GoMint::IModLoader* loader, GoMint::ILogger* logger) {
         g_logger = logger;
-        g_logger->info("SimpleMod loaded: What a day to be alive!");
-        return GoMint::ModLoadResult::Success;
+        g_logger->info("SimpleMod activated: What a day to be alive!");
+        return GoMint::ModActivationResult::Success;
     }
 
-    MOD_API void MOD_CALL on_mod_unload() {
-        g_logger->info("SimpleMod unloaded");
+    MOD_API void MOD_CALL on_mod_deactivate() {
+        g_logger->info("SimpleMod deactivated");
         g_logger = nullptr;
     }
 

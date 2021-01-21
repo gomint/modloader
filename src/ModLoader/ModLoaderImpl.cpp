@@ -4,14 +4,12 @@
 // Stability: experimental
 //
 #include <ModLoader/ModLoaderImpl.h>
+#include <ModLoader/Filesystem.h>
 #include <SymExtract/Types/DedicatedServer.h>
 
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
-#if defined(MODLOADER_WINDOWS)
-#   include <ModLoader/Windows/Filesystem.h>
-#endif
 
 #include <cstdio>
 
@@ -21,12 +19,13 @@ namespace GoMint {
     // Implementation
     //
     ModLoader ModLoader::k_instance;
-    const char* ModLoader::k_logPattern = "[%Y-%m-%d %H:%M:%S.%e] [%-13n] [%^%-8l%$] %v";
+    const char* ModLoader::k_logPattern = "[%Y-%m-%d %H:%M:%S.%e] [%=15n] [%^%=8l%$] %v";
 #if defined(MODLOADER_DEBUG)
     spdlog::level::level_enum ModLoader::k_logLevel = spdlog::level::debug;
 #else
     spdlog::level::level_enum ModLoader::k_logLevel = spdlog::level::warn;
 #endif
+    std::string ModLoader::k_modDirectory = "mods";
 
     ModLoader::ModLoader() noexcept
             : m_staticallyInitialized{false},
@@ -53,14 +52,19 @@ namespace GoMint {
             return true;
         }
         printf("Initializating ModLoader...\n");
-        if (!Filesystem::isDirectory("mods") && !Filesystem::createDirectory("mods")) {
-            return false;
-        }
-        if (!initializeLogging()) {
+
+        if (!Filesystem::isDirectory(k_modDirectory) &&
+            !Filesystem::createDirectory(k_modDirectory)) {
+            printf("Could not create '%s' directory\n", k_modDirectory.c_str());
             return false;
         }
 
-        m_logger->info("Searching for mods in 'mods/'");
+        if (!initializeLogging()) {
+            printf("Could not setup logging\n");
+            return false;
+        }
+
+        m_logger->info("Searching for mods in '{}'", k_modDirectory);
         if (!searchForMods()) {
             return false;
         }
@@ -70,6 +74,10 @@ namespace GoMint {
 
         m_logger->info("Initialization complete");
         return true;
+    }
+
+    spdlog::logger* ModLoader::getLogger() const {
+        return m_logger.get();
     }
 
     LoggerPtr ModLoader::createLogger(const std::string& name) {
@@ -125,21 +133,28 @@ namespace GoMint {
     }
 
     bool ModLoader::searchForMods() {
-        if (!Filesystem::isDirectory("mods") && !Filesystem::createDirectory("mods")) {
-            return false;
-        }
-
-        std::vector<std::string> dllFiles = Filesystem::listDLLsInDirectory("mods");
+        std::vector<std::string> dllFiles = Filesystem::listSharedLibraries(k_modDirectory);
         m_logger->info("Examining {} potential mods", dllFiles.size());
         for (auto& dll : dllFiles) {
-            auto mod = Mod::loadModFromLibrary(this, "mods/" + dll);
+            auto mod = Mod::loadModFromLibrary(this, k_modDirectory + "/" + dll);
             if (mod == nullptr) {
                 continue;
             }
 
-            m_logger->info("Detected mod '{}'", mod->getLongName());
-            if (mod->load(this) == ModLoadResult::Success) {
-                m_logger->info("Loaded mod '{}'", mod->getLongName());
+            if (!mod->initialize(this)) {
+                continue;
+            }
+
+            m_logger->info(
+                    "Loaded mod '{}' v{}.{}.{} by {}",
+                    mod->getLongName(),
+                    mod->getVersion().m_major,
+                    mod->getVersion().m_minor,
+                    mod->getVersion().m_patch,
+                    mod->getAuthor()
+            );
+            if (mod->activate(this) == ModActivationResult::Success) {
+                m_logger->info("Activated mod '{}'", mod->getLongName());
                 m_loadedMods.emplace_back(std::move(mod));
             }
         }
@@ -162,16 +177,8 @@ namespace GoMint {
     //
     // Public API
     //
-    int ModLoader::getMajorVersion() {
-        return MODLOADER_VERSION_MAJOR;
-    }
-
-    int ModLoader::getMinorVersion() {
-        return MODLOADER_VERSION_MINOR;
-    }
-
-    int ModLoader::getPatchVersion() {
-        return MODLOADER_VERSION_PATCH;
+    SemanticVersion ModLoader::getVersion() const {
+        return MODLOADER_VERSION;
     }
 
 }
