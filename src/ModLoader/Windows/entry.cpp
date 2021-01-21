@@ -6,12 +6,12 @@
 
 #include <Windows.h>
 
-#include "../ModLoaderEntry.h"
+#include "../ModLoaderImpl.h"
 
 BOOL WINAPI DllMain(HINSTANCE hInstanceDLL, DWORD fdwReason, LPVOID lpvReserved) {
     if (fdwReason != DLL_PROCESS_ATTACH) {
         return TRUE;
     }
 
-    return GoMint::ModLoaderEntry::initialize() ? TRUE : FALSE;
+    return GoMint::ModLoader::initializeStatically() ? TRUE : FALSE;
 }

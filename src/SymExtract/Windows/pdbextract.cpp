@@ -95,7 +95,7 @@ namespace GoMint {
         }
 
         if (!loadInputModule(&module, inputFile.c_str())) {
-            printf("Failed to load input module\n");
+            printf("Failed to loadModFromLibrary input module\n");
             return false;
         }
 

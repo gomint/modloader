@@ -1,4 +1,9 @@
 target_sources(ModLoader
     PRIVATE
+        Filesystem.h
+        SharedLibrary.h
+    PRIVATE
         entry.cpp
+        Filesystem.cpp
+        SharedLibrary.cpp
 )

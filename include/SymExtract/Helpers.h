@@ -63,6 +63,12 @@ namespace GoMint::SymExtract {
     // construct member function pointers at will.
 
 #if defined(_MSC_VER)
+
+#   define SYMEXTRACT_CDECL    __cdecl
+#   define SYMEXTRACT_THISCALL __thiscall
+#   define SYMEXTRACT_STDCALL  __stdcall
+#   define SYMEXTRACT_FASTCALL __fastcall
+
     struct MicrosoftSingleMFP {
         std::uintptr_t m_address;
     };
@@ -117,6 +123,12 @@ namespace GoMint::SymExtract {
         return u.m_address;
     };
 #elif defined(__GNUC__)
+
+#   define SYMEXTRACT_CDECL    __attribute__ ((cdecl))
+#   define SYMEXTRACT_THISCALL __attribute__ ((thiscall))
+#   define SYMEXTRACT_STDCALL  __attribute__ ((stdcall))
+#   define SYMEXTRACT_FASTCALL __attribute__ ((fastcall))
+
     struct GnuMFP {
         std::uintptr_t m_address;       // As long as the address is even, this will be treated a a direct address and not a vtable index
         std::intptr_t  m_thisdelta;

@@ -1,0 +1,44 @@
+#ifndef MODLOADER_CONFIG_H
+#define MODLOADER_CONFIG_H
+
+//
+// Version constants
+//
+#define MODLOADER_VERSION_MAJOR @PROJECT_VERSION_MAJOR@
+#define MODLOADER_VERSION_MINOR @PROJECT_VERSION_MINOR@
+#define MODLOADER_VERSION_PATCH @PROJECT_VERSION_PATCH@
+
+#if defined(_WIN32) || defined(_WIN64)
+#   define MODLOADER_WINDOWS
+#elif defined(__linux__)
+#   define MODLOADER_LINUX
+#endif
+
+#ifndef NDEBUG
+#   define MODLOADER_DEBUG
+#endif
+
+//
+// Shared Library API
+//
+#if defined(_MSC_VER)
+#   if defined(MODLOADER_API_EXPORT)
+#       define MODLOADER_API __declspec(dllexport)
+#   else
+#       define MODLOADER_API __declspec(dllimport)
+#   endif
+#   define MODLOADER_CALL __stdcall
+#   define MOD_API __declspec(dllexport)
+#   define MOD_CALL __stdcall
+#else
+#   if defined(MODLOADER_API_EXPORT)
+#       define MODLOADER_API __attribute__ ((dllexport))
+#   else
+#       define MODLOADER_API __attribute__ ((dllimport))
+#   endif
+#   define MODLOADER_CALL __attribute__ ((stdcall))
+#   define MOD_API __attribute__ ((dllexport))
+#   define MOD_CALL __attribute__ ((stdcall))
+#endif
+
+#endif // MODLOADER_CONFIG_H

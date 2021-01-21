@@ -1,8 +1,14 @@
 target_sources(ModLoader
     PRIVATE
-        ModLoader.cpp
-        ModLoaderEntry.cpp
-        ModLoaderEntry.h
+        HookDispatcher.h
+        Logger.h
+        Mod.h
+        ModLoaderImpl.h
+    PRIVATE
+        HookDispatcher.cpp
+        Logger.cpp
+        Mod.cpp
+        ModLoaderImpl.cpp
 )
 
 if (WIN32)
