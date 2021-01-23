@@ -229,7 +229,7 @@ namespace GoMint {
         writer.newline() << "#include <" << includePrefix << "Symbols.h>";
         for (auto& include : m_includes) {
             if (!include.empty() && include[0] == '@') {
-                writer.newline() << "#include <" << includePrefix << include << ">";
+                writer.newline() << "#include <" << includePrefix << include.substr(1) << ".h>";
             }
         }
     }
@@ -279,18 +279,42 @@ namespace GoMint {
         writer.newline() << "public:";
         writer.increaseIndent();
 
-        for (auto& func : m_type->m_functions) {
+        if (!m_type->m_members.empty()) {
+            std::uint64_t currentOffset = 0;
+            std::size_t paddingCount = 0;
+            for (auto& member : m_type->m_members) {
+                if (member.m_offset != Member::INVALID_OFFSET && member.m_offset > currentOffset) {
+                    // Generate padding
+                    std::uint64_t diff = member.m_offset - currentOffset;
+                    writer.newline() << "std::uint8_t m_unknown" << (paddingCount++) << "[" << diff << "];";
+                    currentOffset += diff;
+                }
+
+                writer.newline() << member.m_type << " " << member.m_name << ";";
+                currentOffset += member.m_size;
+            }
+            if (m_type->m_size > currentOffset) {
+                writer.newline() << "std::uint8_t m_unknown" << (paddingCount++) << "[" << (m_type->m_size - currentOffset) << "];";
+            }
             writer.newline();
-            func.m_symbol->generateFunctionDeclaration(writer, func.m_name);
-            writer.cont() << ";";
         }
 
-        writer.newline();
-
-        for (auto& memfunc : m_type->m_memberFunctions) {
+        if (!m_type->m_functions.empty()) {
+            for (auto& func : m_type->m_functions) {
+                writer.newline();
+                func.m_symbol->generateFunctionDeclaration(writer, func.m_name);
+                writer.cont() << ";";
+            }
             writer.newline();
-            memfunc.m_symbol->generateMemberFunctionDeclaration(writer, memfunc.m_name);
-            writer.cont() << ";";
+        }
+
+        if (!m_type->m_memberFunctions.empty()) {
+            for (auto& memfunc : m_type->m_memberFunctions) {
+                writer.newline();
+                memfunc.m_symbol->generateMemberFunctionDeclaration(writer, memfunc.m_name);
+                writer.cont() << ";";
+            }
+            writer.newline();
         }
 
         writer.decreaseIndent().newline() << "};";

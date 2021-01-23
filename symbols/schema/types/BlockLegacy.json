@@ -1,0 +1,27 @@
+{
+    "accessibility": "public",
+    "filename": "Types/BlockLegacy",
+    "includes": [
+        "<string>",
+        "@TypeS/HashedString"
+    ],
+    "type": {
+        "name": "BlockLegacy",
+        "size": 808,
+        "layout": [
+            {
+                "name": "m_hashedIdentifier",
+                "type": "HashedString",
+                "offset": 40
+            },
+            {
+                "name": "m_namespace",
+                "type": "std::string",
+                "offset": 88
+            }
+        ]
+    },
+    "symbols": [
+
+    ]
+}

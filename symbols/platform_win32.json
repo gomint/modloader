@@ -1,0 +1,15 @@
+{
+    "symbolnames": {
+        "DedicatedServer::start": "DedicatedServer::start",
+        "BlockTypeRegistry::forEachBlock": "BlockTypeRegistry::forEachBlock",
+        "ServerInstanceEventCoordinator::sendServerInitializeEnd": "ServerInstanceEventCoordinator::sendServerInitializeEnd"
+    },
+
+    "typesizes": {
+        "std::uint8_t": 1,
+        "std::uint16_t": 2,
+        "std::uint32_t": 4,
+        "std::uint64_t": 8,
+        "std::string": 32
+    }
+}

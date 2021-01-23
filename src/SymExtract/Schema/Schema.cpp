@@ -9,6 +9,60 @@
 
 namespace GoMint {
 
+    bool Schema::loadFrom(const std::filesystem::path& schema, const std::filesystem::path& platform) {
+        std::ifstream in(platform, std::ios::in | std::ios::binary);
+        if (!in) {
+            return false;
+        }
+
+        nlohmann::json j;
+        in >> j;
+        in.close();
+
+        if (j.contains("typesizes")) {
+            auto& tj = j.at("typesizes");
+            if (!tj.is_object()) {
+                return false;
+            }
+
+            for (auto& el : tj.items()) {
+                if (!el.value().is_number_unsigned()) return false;
+
+                const auto& name = el.key();
+                auto size = el.value().get<std::uint64_t>();
+
+                m_typeSizeDeclarations.emplace_back(std::make_unique<TypeSizeDeclaration>(name, size));
+                m_typeSizeDescriptors.emplace(name, m_typeSizeDeclarations.back().get());
+            }
+        }
+
+        if (!loadFile(schema)) {
+            return false;
+        }
+
+        if (j.contains("symbolnames")) {
+            auto& sj = j.at("symbolnames");
+            if (!sj.is_object()) {
+                return false;
+            }
+
+            for (auto& el : sj.items()) {
+                if (!el.value().is_string()) return false;
+
+                const auto& name = el.key();
+                auto finder = m_symbolsByName.find(name);
+                if (finder == m_symbolsByName.end()) {
+                    continue;
+                }
+
+                finder->second->m_symbolName = el.value().get<std::string>();
+                m_symbolsByLookup.insert(std::make_pair(finder->second->m_symbolName, finder->second));
+            }
+        }
+
+        return true;
+    }
+
     bool Schema::loadFile(const std::filesystem::path& path) {
         SchemaFile file(this);
         bool isOutputFile = false;
@@ -22,36 +76,6 @@ namespace GoMint {
         return true;
     }
 
-    bool Schema::loadSymbolNames(const std::filesystem::path& path) {
-        std::ifstream in(path, std::ios::in | std::ios::binary);
-        if (!in) {
-            return false;
-        }
-
-        nlohmann::json j;
-        in >> j;
-        in.close();
-
-        if (!j.is_object()) {
-            return false;
-        }
-
-        for (auto& el : j.items()) {
-            if (!el.value().is_string()) return false;
-
-            const auto& name = el.key();
-            auto finder = m_symbolsByName.find(name);
-            if (finder == m_symbolsByName.end()) {
-                continue;
-            }
-
-            finder->second->m_symbolName = el.value().get<std::string>();
-            m_symbolsByLookup.insert(std::make_pair(finder->second->m_symbolName, finder->second));
-        }
-
-        return true;
-    }
-
     Symbol * Schema::findSymbolByName(const std::string& name) {
         auto it = m_symbolsByName.find(name);
         return (it == m_symbolsByName.end()) ? nullptr : it->second;
@@ -60,6 +84,11 @@ namespace GoMint {
     Symbol* Schema::findSymbolByLookup(const std::string& lookup) {
         auto it = m_symbolsByLookup.find(lookup);
         return (it == m_symbolsByLookup.end()) ? nullptr : it->second;
+    }
+
+    TypeSizeDescriptor * Schema::findTypeSizeByName(const std::string& name) {
+        auto it = m_typeSizeDescriptors.find(name);
+        return (it == m_typeSizeDescriptors.end()) ? nullptr : it->second;
     }
 
     bool Schema::validate(bool verbose) {
@@ -96,6 +125,7 @@ namespace GoMint {
 
     void Schema::addType(Type* type) {
         m_types.push_back(type);
+        m_typeSizeDescriptors.emplace(type->getName(), type);
     }
 
     void Schema::addInclude(const std::string& include) {

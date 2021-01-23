@@ -1,5 +1,6 @@
 target_sources(ModLoader
     PRIVATE
+        Debugger.h
         Filesystem.h
         HookDispatcher.h
         Logger.h
@@ -7,6 +8,7 @@ target_sources(ModLoader
         ModLoaderImpl.h
         SharedLibrary.h
     PRIVATE
+        Debugger.cpp
         Filesystem.cpp
         HookDispatcher.cpp
         Logger.cpp
@@ -15,6 +17,7 @@ target_sources(ModLoader
         SharedLibrary.cpp
 )
 
+add_subdirectory(Wrappers)
 if (WIN32)
     add_subdirectory(Windows)
 elseif (UNIX)

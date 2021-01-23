@@ -10,6 +10,8 @@ target_sources(SymExtract
         FunctionArgument.h
         FunctionSymbol.cpp
         FunctionSymbol.h
+        Member.cpp
+        Member.h
         MemberFunction.cpp
         MemberFunction.h
         MemberFunctionSymbol.cpp
@@ -24,4 +26,6 @@ target_sources(SymExtract
         TypeInheritance.h
         Type.cpp
         Type.h
+        TypeSizeDescriptor.cpp
+        TypeSizeDescriptor.h
 )

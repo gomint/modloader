@@ -30,11 +30,11 @@ namespace GoMint {
         friend class SchemaFile;
     public:
 
-        bool loadFile(const std::filesystem::path& path);
-        bool loadSymbolNames(const std::filesystem::path& path);
+        bool loadFrom(const std::filesystem::path& schema, const std::filesystem::path& platform);
 
         Symbol* findSymbolByName(const std::string& name);
         Symbol* findSymbolByLookup(const std::string& lookup);
+        TypeSizeDescriptor* findTypeSizeByName(const std::string& name);
 
         bool validate(bool verbose = true);
 
@@ -47,9 +47,13 @@ namespace GoMint {
         std::unordered_map<std::string, Symbol*> m_symbolsByName;
         std::unordered_map<std::string, Symbol*> m_symbolsByLookup;
         std::vector<Type*> m_types;
+        std::unordered_map<std::string, TypeSizeDescriptor*> m_typeSizeDescriptors;
 
         std::unordered_set<std::string> m_requiredIncludes;
 
+        std::vector<std::unique_ptr<TypeSizeDeclaration>> m_typeSizeDeclarations;
+
+        bool loadFile(const std::filesystem::path& path);
         void addSymbol(Symbol* symbol);
         void addType(Type* type);
         void addInclude(const std::string& include);

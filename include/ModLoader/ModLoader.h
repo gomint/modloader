@@ -12,6 +12,7 @@
 #include <ModLoader/Config.h>
 
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <string>
 
@@ -114,6 +115,47 @@ namespace GoMint {
     };
 
     /**
+     * A descriptor of a registered block.
+     */
+    class IBlockLegacy {
+
+    public:
+
+        /**
+         * Gets a block's unique identifier. For a block named 'minecraft:air', its identifier
+         * would be 'air'.
+         *
+         * @return The block's unique identifier
+         */
+        virtual const std::string& getIdentifier() const = 0;
+
+        /**
+         * Gets a block's namespace. For a block named 'minecraft:air', its namespace would be
+         * 'minecraft'.
+         *
+         * @return The block's namespace
+         */
+        virtual const std::string& getNamespace() const = 0;
+
+    };
+
+    /**
+     *
+     */
+    class IBlockTypeRegistry {
+
+    public:
+
+        /**
+         * Enumerates all registered blocks and invokes the specified callback for each of them.
+         *
+         * @param callback The callback to invoke
+         */
+        virtual void forEachBlock(std::function<bool (const IBlockLegacy&)> callback) = 0;
+
+    };
+
+    /**
      * Logger class which mods should use to produce log output.
      */
     class ILogger {
@@ -141,6 +183,9 @@ namespace GoMint {
 
         /** @return The installed modloader's version */
         virtual SemanticVersion getVersion() const = 0;
+
+        /** @return The server's block type registry */
+        virtual IBlockTypeRegistry* getBlockTypeRegistry() = 0;
 
     };
 

@@ -1,0 +1,21 @@
+{
+    "accessibility": "public",
+    "filename": "Types/HashedString",
+    "include": [
+        "<string>"
+    ],
+    "type": {
+        "name": "HashedString",
+        "size": 40,
+        "layout": [
+            {
+                "name": "m_hash",
+                "type": "std::uint64_t"
+            },
+            {
+                "name": "m_string",
+                "type": "std::string"
+            }
+        ]
+    }
+}

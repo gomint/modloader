@@ -103,34 +103,30 @@ bool parseCommandLineArguments(int argc, char* argv[]) {
     return true;
 }
 
-bool readSchema(Schema& schema, const std::string& file) {
-    std::filesystem::path path(file);
-    if (!std::filesystem::exists(path)) {
+bool readSchema(Schema& schema, const std::string& schemaFile, const std::string& platformFile) {
+    std::filesystem::path schemaPath(schemaFile);
+    if (!std::filesystem::exists(schemaPath)) {
         printf("Schema file does not exist\n");
         return false;
     }
 
-    if (!std::filesystem::is_regular_file(path)) {
+    if (!std::filesystem::is_regular_file(schemaPath)) {
         printf("Schema file is not a regular file\n");
         return false;
     }
 
-    return schema.loadFile(file);
-}
-
-bool readSymbolNames(Schema& schema, const std::string& file) {
-    std::filesystem::path path(file);
-    if (!std::filesystem::exists(path)) {
-        printf("Symbol names file does not exist\n");
+    std::filesystem::path platformPath(platformFile);
+    if (!std::filesystem::exists(platformPath)) {
+        printf("Platform file does not exist\n");
         return false;
     }
 
-    if (!std::filesystem::is_regular_file(path)) {
-        printf("Symbol names file is not a regular file\n");
+    if (!std::filesystem::is_regular_file(platformPath)) {
+        printf("Platform file is not a regular file\n");
         return false;
     }
 
-    return schema.loadSymbolNames(path);
+    return schema.loadFrom(schemaFile, platformFile);
 }
 
 
@@ -142,13 +138,8 @@ int main(int argc, char* argv[]) {
 
     Schema schema;
 
-    if (!readSchema(schema, g_schemaDefinitionFile)) {
-        printf("Failed to read definition table\n");
-        return 1;
-    }
-
-    if (!readSymbolNames(schema, g_symbolNameTableFile)) {
-        printf("Failed to read symbol names table\n");
+    if (!readSchema(schema, g_schemaDefinitionFile, g_symbolNameTableFile)) {
+        printf("Failed to read schema\n");
         return 1;
     }
 

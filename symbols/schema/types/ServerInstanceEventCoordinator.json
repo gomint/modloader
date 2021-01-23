@@ -1,0 +1,30 @@
+{
+    "accessibility": "public",
+    "filename": "Types/ServerInstanceEventCoordinator",
+    "includes": [],
+    "type": {
+        "name": "ServerInstanceEventCoordinator",
+        "memfuncs": [
+            {
+                "name": "sendServerInitializeEnd",
+                "symbol": "ServerInstanceEventCoordinator::sendServerInitializeEnd"
+            }
+        ]
+    },
+    "symbols": [
+        {
+            "name": "ServerInstanceEventCoordinator::sendServerInitializeEnd",
+            "type": "memfunc",
+            "ptrtype": "ServerInstanceEventCoordinator_sendServerInitializeEnd_funcptr",
+            "varname": "g_ServerInstanceEventCoordinator_sendServerInitializeEnd",
+            "inheritance": "single",
+            "ret": "void",
+            "args": [
+                {
+                    "type": "void*",
+                    "name": "server"
+                }
+            ]
+        }
+    ]
+}

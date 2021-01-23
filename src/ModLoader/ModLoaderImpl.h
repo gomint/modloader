@@ -15,6 +15,7 @@
 #include <ModLoader/HookDispatcher.h>
 #include <SymExtract/Symbols.h>
 #include <SymExtract/Types/DedicatedServer.h>
+#include <SymExtract/Types/ServerInstanceEventCoordinator.h>
 
 #include <spdlog/spdlog.h>
 
@@ -63,6 +64,14 @@ namespace GoMint {
         // Public API
         //
         SemanticVersion getVersion() const override;
+        IBlockTypeRegistry* getBlockTypeRegistry() override;
+
+    private:
+        //
+        // Events
+        //
+        void onDedicatedServerStart(SymExtract::DedicatedServer* server, const std::string& sessionID);
+        void onServerInitializationComplete(void* server);
 
     private:
         //
@@ -70,6 +79,9 @@ namespace GoMint {
         //
         SymExtract::DedicatedServer_start_funcptr hook_DedicatedServer_start_callback;
         void hook_DedicatedServer_start(const std::string& sessionId);
+
+        SymExtract::ServerInstanceEventCoordinator_sendServerInitializeEnd_funcptr hook_ServerInstanceEventCoordinator_sendServerInitializeEnd_callback;
+        void hook_ServerInstanceEventCoordinator_sendServerInitializeEnd(void* server);
 
         HookDispatcher m_hooks;
 
@@ -102,6 +114,8 @@ namespace GoMint {
         void prepareLogger(spdlog::logger* logger);
         /** Dynamic Initialization: searches for mods */
         bool searchForMods();
+
+        void checkForDebuggingOptions();
 
     };
 

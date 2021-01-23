@@ -1,5 +1,9 @@
 {
     "import": [
-        "types/DedicatedServer.json"
+        "types/HashedString.json",
+        "types/DedicatedServer.json",
+        "types/BlockLegacy.json",
+        "types/BlockTypeRegistry.json",
+        "types/ServerInstanceEventCoordinator.json"
     ]
 }

@@ -1,0 +1,32 @@
+{
+    "accessibility": "public",
+    "filename": "Types/BlockTypeRegistry",
+    "includes": [
+        "<functional>",
+        "@Types/BlockLegacy"
+    ],
+    "type": {
+        "name": "BlockTypeRegistry",
+        "funcs": [
+            {
+                "name": "forEachBlock",
+                "symbol": "BlockTypeRegistry::forEachBlock"
+            }
+        ]
+    },
+    "symbols": [
+        {
+            "name": "BlockTypeRegistry::forEachBlock",
+            "type": "func",
+            "ptrtype": "BlockTypeRegistry_forEachBlock_funcptr",
+            "varname": "g_BlockTypeRegistry_forEachBlock",
+            "ret": "void",
+            "args": [
+                {
+                    "type": "std::function<bool (const BlockLegacy&)>",
+                    "name": "callback"
+                }
+            ]
+        }
+    ]
+}

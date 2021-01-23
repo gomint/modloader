@@ -37,7 +37,7 @@ namespace GoMint {
     }
 
     void FunctionSymbol::generateFunctionDeclaration(FileWriter& writer, const std::string& name) {
-        writer.cont() << m_returnType << " " << name << "(";
+        writer.cont() << "static " << m_returnType << " " << name << "(";
         for (std::size_t i = 0; i < m_arguments.size(); ++i) {
             if (i != 0) {
                 writer.cont() << ", ";

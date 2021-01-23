@@ -50,10 +50,10 @@ endif()
 
 if (WIN32)
     set(symextract_executable "${symextract_workdir}/SymExtract.exe")
-    set(symextract_symboltable "${CMAKE_SOURCE_DIR}/symbols/symbolnames_win32.json")
+    set(symextract_symboltable "${CMAKE_SOURCE_DIR}/symbols/platform_win32.json")
 else()
     set(symextract_executable "${symextract_workdir}/SymExtract")
-    set(symextract_symboltable "${CMAKE_SOURCE_DIR}/symbols/symbolnames_unix.json")
+    set(symextract_symboltable "${CMAKE_SOURCE_DIR}/symbols/platform_unix.json")
 endif()
 
 set(symextract_command
@@ -163,6 +163,25 @@ target_sources(ModLoader PRIVATE ${symextract_generated_files})
 
 # Private sources
 target_include_directories(ModLoader PRIVATE src)
+
+#
+# Compilation
+#
+
+# Select the release version of MSVC's runtime library
+#
+# This is done to ensure ABI compatibility when hooking into the ReleaseMode compiled
+# bedrock server binary even in Debug builds. If not setup properly, objects such as
+# std::string will store additional members and thus screw up the memory layout.
+set_target_properties(ModLoader PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
+
+# We make this definition public, since mods compiled with this undefined or set to any
+# different value will simply _crash_ at runtime. I feel, this is reasoning enough to
+# allow the PUBLIC here. And yes, we must set this value ourselves (see above).
+target_compile_definitions(ModLoader PUBLIC _ITERATOR_DEBUG_LEVEL=0)
+
+# We need to also compile spdlog with these settings
+target_compile_definitions(spdlog PRIVATE _ITERATOR_DEBUG_LEVEL=0)
 
 #
 # Examples

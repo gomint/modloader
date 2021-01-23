@@ -5,11 +5,16 @@
 //
 #include <ModLoader/ModLoaderImpl.h>
 #include <ModLoader/Filesystem.h>
-#include <SymExtract/Types/DedicatedServer.h>
+#include <ModLoader/Wrappers/BlockTypeRegistry.h>
+
+#if defined(MODLOADER_DEBUG)
+
+#   include <ModLoader/Debugger.h>
+
+#endif
 
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
-
 
 #include <cstdio>
 
@@ -48,6 +53,8 @@ namespace GoMint {
     }
 
     bool ModLoader::initialize(SymExtract::DedicatedServer* server, const std::string& sessionId) {
+        checkForDebuggingOptions();
+
         if (m_dynamicallyInitialized) {
             return true;
         }
@@ -69,7 +76,7 @@ namespace GoMint {
             return false;
         }
 
-        m_dedicatedServer = server;
+        m_dedicatedServer        = server;
         m_dynamicallyInitialized = true;
 
         m_logger->info("Initialization complete");
@@ -91,6 +98,9 @@ namespace GoMint {
         success &= m_hooks.registerMemberHook(SymExtract::g_DedicatedServer_start,
                                               &ModLoader::hook_DedicatedServer_start,
                                               hook_DedicatedServer_start_callback);
+        success &= m_hooks.registerMemberHook(SymExtract::g_ServerInstanceEventCoordinator_sendServerInitializeEnd,
+                                              &ModLoader::hook_ServerInstanceEventCoordinator_sendServerInitializeEnd,
+                                              hook_ServerInstanceEventCoordinator_sendServerInitializeEnd_callback);
         return success && m_hooks.install();
     }
 
@@ -118,7 +128,8 @@ namespace GoMint {
         m_loggingSinks.push_back(fileSink);
 
         m_logger = std::make_unique<spdlog::logger>("ModLoader", std::begin(m_loggingSinks), std::end(m_loggingSinks));
-        auto defaultLogger = std::make_shared<spdlog::logger>("Unknown", std::begin(m_loggingSinks), std::end(m_loggingSinks));
+        auto defaultLogger = std::make_shared<spdlog::logger>("Unknown", std::begin(m_loggingSinks),
+                                                              std::end(m_loggingSinks));
 
         prepareLogger(m_logger.get());
         prepareLogger(defaultLogger.get());
@@ -162,16 +173,63 @@ namespace GoMint {
         return true;
     }
 
+    void ModLoader::checkForDebuggingOptions() {
+#if defined(MODLOADER_DEBUG)
+        Debugger::waitForDebugger();
+        Debugger::breakpoint();
+#endif
+    }
+
+
+    //
+    // Events
+    //
+    void ModLoader::onDedicatedServerStart(SymExtract::DedicatedServer* server, const std::string& sessionID) {
+
+    }
+
+    void ModLoader::onServerInitializationComplete(void* server) {
+#if defined(MODLOADER_DEBUG)
+        Debugger::breakpoint();
+#endif
+        BlockTypeRegistry registry;
+        registry.forEachBlock([&](const IBlockLegacy& block) -> bool {
+            m_logger->info("Detected block: {}", block.getIdentifier());
+            return true;
+        });
+    }
+
+
+
     //
     // Hooks
     //
+
+    // =============================================================================== //
+    // WARNING
+    //
+    // The following member functions are subject of _EXTREME_ stretching of C++'s
+    // low-level implementation details. NEVER rely the this pointer to actually
+    // point to a low-level instance! Most likely, it is not!
+    // =============================================================================== //
+
     void ModLoader::hook_DedicatedServer_start(const std::string& sessionId) {
         // Warning: this is DedicatedServer NOT ModLoader!
+        auto     * server = reinterpret_cast<SymExtract::DedicatedServer*>(this);
         ModLoader& loader = ModLoader::k_instance;
-        if (!loader.initialize(reinterpret_cast<SymExtract::DedicatedServer*>(this), sessionId)) {
+        if (!loader.initialize(server, sessionId)) {
             return; // Will simply quit the server
         }
+        loader.onDedicatedServerStart(server, sessionId);
         (reinterpret_cast<SymExtract::SingleInvocable*>(this)->*loader.hook_DedicatedServer_start_callback)(sessionId);
+    }
+
+    void ModLoader::hook_ServerInstanceEventCoordinator_sendServerInitializeEnd(void* server) {
+        // Warning: this is ServerInstanceEventCoordinator NOT ModLoader!
+        ModLoader& loader = ModLoader::k_instance;
+        loader.onServerInitializationComplete(server);
+        (reinterpret_cast<SymExtract::SingleInvocable*>(this)->*
+         loader.hook_ServerInstanceEventCoordinator_sendServerInitializeEnd_callback)(server);
     }
 
     //
@@ -181,14 +239,19 @@ namespace GoMint {
         return MODLOADER_VERSION;
     }
 
+    IBlockTypeRegistry* ModLoader::getBlockTypeRegistry() {
+        // TODO: Once symbols are acquired
+        return nullptr;
+    }
+
 }
 
 extern "C" {
-    MODLOADER_API GoMint::IModLoader* MODLOADER_CALL get_mod_loader_instance() {
-        GoMint::ModLoader& loader = GoMint::ModLoader::k_instance;
-        if (loader.m_staticallyInitialized && loader.m_dynamicallyInitialized) {
-            return &loader;
-        }
-        return nullptr;
+MODLOADER_API GoMint::IModLoader* MODLOADER_CALL get_mod_loader_instance() {
+    GoMint::ModLoader& loader = GoMint::ModLoader::k_instance;
+    if (loader.m_staticallyInitialized && loader.m_dynamicallyInitialized) {
+        return &loader;
     }
+    return nullptr;
+}
 }
