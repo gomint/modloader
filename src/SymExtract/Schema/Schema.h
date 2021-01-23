@@ -7,6 +7,8 @@
 #ifndef MODLOADER_SCHEMA_H
 #define MODLOADER_SCHEMA_H
 
+#include "Constant.h"
+#include "ExternType.h"
 #include "ForwardDeclaration.h"
 #include "SchemaFile.h"
 #include "Symbol.h"
@@ -14,6 +16,7 @@
 
 #include <filesystem>
 #include <memory>
+#include <optional>
 #include <unordered_set>
 
 namespace GoMint {
@@ -28,13 +31,15 @@ namespace GoMint {
     class Schema {
 
         friend class SchemaFile;
+
     public:
 
         bool loadFrom(const std::filesystem::path& schema, const std::filesystem::path& platform);
 
         Symbol* findSymbolByName(const std::string& name);
         Symbol* findSymbolByLookup(const std::string& lookup);
-        TypeSizeDescriptor* findTypeSizeByName(const std::string& name);
+        TypeDescriptor* findTypeDescriptorByName(const std::string& name);
+        std::optional<std::reference_wrapper<const Constant>> findConstantByName(const std::string& name);
 
         bool validate(bool verbose = true);
 
@@ -43,18 +48,21 @@ namespace GoMint {
     private:
 
         std::vector<SchemaFile> m_files;
-        std::vector<Symbol*> m_symbols;
-        std::unordered_map<std::string, Symbol*> m_symbolsByName;
-        std::unordered_map<std::string, Symbol*> m_symbolsByLookup;
-        std::vector<Type*> m_types;
-        std::unordered_map<std::string, TypeSizeDescriptor*> m_typeSizeDescriptors;
 
-        std::unordered_set<std::string> m_requiredIncludes;
+        // Platform specifics
+        std::vector<std::unique_ptr<Symbol>>      m_symbols;
+        std::unordered_map<std::string, Symbol*>  m_symbolsByName;
+        std::unordered_map<std::string, Symbol*>  m_symbolsByLookup;
+        std::vector<std::unique_ptr<ExternType>>  m_externTypes;
+        std::unordered_map<std::string, Constant> m_constants;
 
-        std::vector<std::unique_ptr<TypeSizeDeclaration>> m_typeSizeDeclarations;
+        // Schema Generation
+        std::vector<Type*>                               m_types;
+        std::unordered_map<std::string, TypeDescriptor*> m_typeDescriptors;
+        std::unordered_set<std::string>                  m_requiredIncludes;
+
 
         bool loadFile(const std::filesystem::path& path);
-        void addSymbol(Symbol* symbol);
         void addType(Type* type);
         void addInclude(const std::string& include);
 

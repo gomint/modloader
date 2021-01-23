@@ -9,18 +9,18 @@
 
 namespace GoMint {
 
-    void to_json(nlohmann::json& j, const Function& p) {
-        j["name"] = p.m_name;
-        j["symbol"] = p.m_symbolName;
+    Function::Function(FunctionSignature signature, FunctionResolverPtr resolver)
+        : m_signature{std::move(signature)},
+          m_resolver{std::move(resolver)} {
+
     }
 
-    void from_json(const nlohmann::json& j, Function& p) {
-        j.at("name").get_to(p.m_name);
-        j.at("symbol").get_to(p.m_symbolName);
+    const FunctionSignature & Function::getSignature() const {
+        return m_signature;
     }
 
-    bool Function::resolveSymbols(Schema* schema) {
-        return (m_symbol = reinterpret_cast<FunctionSymbol*>(schema->findSymbolByName(m_symbolName))) != nullptr &&
-                m_symbol->m_type == SymbolType::Function;
+    const FunctionResolver * Function::getResolver() const {
+        return m_resolver.get();
     }
+
 }

@@ -1,31 +1,31 @@
 target_sources(SymExtract
     PRIVATE
-        #DefinitionTable.cpp
         AccessibilityLevel.h
-        ForwardDeclaration.cpp
-        ForwardDeclaration.h
+        Constant.h
+        ExternType.cpp
+        ExternType.h
+        Field.cpp
+        Field.h
+        FixedFunctionResolver.cpp
+        FixedFunctionResolver.h
         Function.cpp
         Function.h
         FunctionArgument.cpp
         FunctionArgument.h
-        FunctionSymbol.cpp
-        FunctionSymbol.h
-        Member.cpp
-        Member.h
-        MemberFunction.cpp
-        MemberFunction.h
-        MemberFunctionSymbol.cpp
-        MemberFunctionSymbol.h
+        FunctionResolution.h
+        FunctionResolver.h
+        FunctionSignature.h
         Schema.cpp
         Schema.h
         SchemaFile.cpp
         SchemaFile.h
         Symbol.cpp
         Symbol.h
-        SymbolType.h
-        TypeInheritance.h
         Type.cpp
         Type.h
-        TypeSizeDescriptor.cpp
-        TypeSizeDescriptor.h
+        TypeDescriptor.cpp
+        TypeDescriptor.h
+        TypeInheritance.h
+        VirtualFunctionResolver.cpp
+        VirtualFunctionResolver.h
 )

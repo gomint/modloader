@@ -58,11 +58,11 @@ namespace GoMint {
                 Bound& result
         ) {
             std::uintptr_t address = registerHook(
-                    SymExtract::retrieveFunctionAddress(original),
-                    SymExtract::retrieveFunctionAddress(target)
+                    SymExtract::getMemfnAddress(original),
+                    SymExtract::getMemfnAddress(target)
             );
             if (address == 0) return false;
-            result = SymExtract::createMemberFunctionPointer<Bound>(address);
+            result = SymExtract::makeMemfnPtr<Bound>(address);
             return true;
         }
 

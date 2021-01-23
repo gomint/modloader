@@ -10,23 +10,16 @@
         "funcs": [
             {
                 "name": "forEachBlock",
-                "symbol": "BlockTypeRegistry::forEachBlock"
+                "resolution": "fixed",
+                "address": "BlockTypeRegistry::forEachBlock",
+                "ret": "void",
+                "args": [
+                    {
+                        "type": "std::function<bool (const BlockLegacy&)>",
+                        "name": "callback"
+                    }
+                ]
             }
         ]
-    },
-    "symbols": [
-        {
-            "name": "BlockTypeRegistry::forEachBlock",
-            "type": "func",
-            "ptrtype": "BlockTypeRegistry_forEachBlock_funcptr",
-            "varname": "g_BlockTypeRegistry_forEachBlock",
-            "ret": "void",
-            "args": [
-                {
-                    "type": "std::function<bool (const BlockLegacy&)>",
-                    "name": "callback"
-                }
-            ]
-        }
-    ]
+    }
 }

@@ -7,27 +7,30 @@
 #ifndef MODLOADER_FUNCTION_H
 #define MODLOADER_FUNCTION_H
 
-#include "FunctionSymbol.h"
-#include <string>
-#include <nlohmann/json.hpp>
+#include "FunctionSignature.h"
+#include "FunctionResolver.h"
 
 namespace GoMint {
 
-    class Schema;
+    /**
+     * A structure describing a function consisting of its function signature
+     * and a way of resolving it at runtime.
+     */
+    class Function {
 
-    struct Function {
+    public:
 
-        std::string m_name;
-        std::string m_symbolName;
+        Function(FunctionSignature signature, FunctionResolverPtr resolver);
 
-        FunctionSymbol* m_symbol;
+        [[nodiscard]] const FunctionSignature& getSignature() const;
+        [[nodiscard]] const FunctionResolver* getResolver() const;
 
-        bool resolveSymbols(Schema* schema);
+    private:
+
+        FunctionSignature   m_signature;
+        FunctionResolverPtr m_resolver;
 
     };
-
-    void to_json(nlohmann::json& j, const GoMint::Function& p);
-    void from_json(const nlohmann::json& j, GoMint::Function& p);
 
 }
 

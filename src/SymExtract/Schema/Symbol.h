@@ -8,9 +8,6 @@
 #define MODLOADER_SYMBOL_H
 
 #include "../FileWriter.h"
-#include "SymbolType.h"
-
-#include <nlohmann/json.hpp>
 
 #include <string>
 #include <vector>
@@ -24,28 +21,29 @@ namespace GoMint {
      * @verison 1.0
      * @stability experimental
      */
-    struct Symbol {
+    class Symbol {
 
-        SymbolType m_type;
-        std::string m_name;
+    public:
 
-        std::string m_symbolName;
-        std::string m_pointerType;
-        std::string m_variableName;
+        Symbol(std::string  name, std::string  lookup);
+        virtual ~Symbol() = default;
+
+        const std::string& getName() const;
+        const std::string& getLookup() const;
+
+        bool hasAddressOffset() const;
+        std::uint64_t getAddressOffset() const;
+        void setAddressOffset(std::uint64_t offset);
+
+    private:
+
+        const std::string m_name;
+        const std::string m_lookup;
 
         // Extracted information:
         std::uintptr_t m_addressOffset = 0ULL;
 
-        explicit Symbol(SymbolType type) : m_type{type} {}
-        virtual ~Symbol() = default;
-
-        virtual void generatePointerTypeDeclaration(FileWriter& writer) = 0;
-        virtual void generateVariableCast(FileWriter& writer, const std::string& expression) = 0;
-
     };
-
-    void to_json(nlohmann::json& j, const GoMint::Symbol& p);
-    void from_json(const nlohmann::json& j, GoMint::Symbol& p);
 
 }
 

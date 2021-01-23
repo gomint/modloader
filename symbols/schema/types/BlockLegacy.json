@@ -3,11 +3,12 @@
     "filename": "Types/BlockLegacy",
     "includes": [
         "<string>",
-        "@TypeS/HashedString"
+        "@Types/HashedString"
     ],
     "type": {
         "name": "BlockLegacy",
         "size": 808,
+        "inheritance": "single",
         "layout": [
             {
                 "name": "m_hashedIdentifier",
@@ -18,10 +19,23 @@
                 "name": "m_namespace",
                 "type": "std::string",
                 "offset": 88
+            },
+            {
+                "name": "m_friction",
+                "type": "float",
+                "offset": 324
+            }
+        ],
+        "memfuncs": [
+            {
+                "name": "getExplosionResistance",
+                "resolution": "virtual",
+                "vindex": 170,
+                "ret": "float",
+                "args": [
+                    { "type": "void*", "name": "actor" }
+                ]
             }
         ]
-    },
-    "symbols": [
-
-    ]
+    }
 }

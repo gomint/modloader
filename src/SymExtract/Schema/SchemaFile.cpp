@@ -7,8 +7,8 @@
 #include "SchemaFile.h"
 #include "Schema.h"
 
-#include "FunctionSymbol.h"
-#include "MemberFunctionSymbol.h"
+#include "FixedFunctionResolver.h"
+#include "VirtualFunctionResolver.h"
 
 #include "../FileWriter.h"
 
@@ -19,8 +19,8 @@
 namespace GoMint {
 
     SchemaFile::SchemaFile(Schema* schema)
-        : m_schema{schema},
-          m_accessibility{AccessibilityLevel::Public} {
+            : m_schema{schema},
+              m_accessibility{AccessibilityLevel::Public} {
 
     }
 
@@ -53,31 +53,8 @@ namespace GoMint {
 
 
         // This schema file does produce output
-
-        if (j.contains("accessibility")) {
-            j.at("accessibility").get_to(m_accessibility);
-        } else {
-            m_accessibility = AccessibilityLevel::Public;
-        }
-
-        j.at("filename").get_to(m_filename);
-
-        if (j.contains("includes")) {
-            j.at("includes").get_to(m_includes);
-            for (auto& include : m_includes) {
-                if (!include.empty() && include[0] == '<') {
-                    m_schema->addInclude(include);
-                }
-            }
-        } else {
-            m_includes.clear();
-        }
-
-        if (j.contains("symbols")) {
-            isOutput = true;
-            if (!importSymbols(j.at("symbols"))) {
-                return false;
-            }
+        if (!importFileMeta(j)) {
+            return false;
         }
 
         if (j.contains("type")) {
@@ -90,65 +67,188 @@ namespace GoMint {
         return true;
     }
 
-    bool SchemaFile::importType(const nlohmann::json& j) {
-        m_type = std::make_unique<Type>();
-        from_json(j, *m_type);
+    bool SchemaFile::importFileMeta(const nlohmann::json& j) {
+        //
+        // Obligatory
+        //
+        j.at("filename").get_to(m_filename);
 
-        if (!m_type->resolveSymbols(m_schema)) {
-            printf("Unresolved symbols in type '%s'\n", m_type->m_name.c_str());
-            return false;
+        //
+        // Optional
+        //
+        if (j.contains("accessibility")) {
+            j.at("accessibility").get_to(m_accessibility);
+        } else {
+            m_accessibility = AccessibilityLevel::Public;
+        }
+
+        if (j.contains("includes")) {
+            j.at("includes").get_to(m_includes);
+            for (auto& include : m_includes) {
+                if (!include.empty() && include[0] == '<') {
+                    m_schema->addInclude(include);
+                }
+            }
+        } else {
+            m_includes.clear();
+        }
+        return true;
+    }
+
+    bool SchemaFile::importType(const nlohmann::json& j) {
+        //
+        // Obligatory
+        //
+        std::string name;
+
+        j.at("name").get_to(name);
+
+        m_type = std::make_unique<Type>(name);
+
+
+        //
+        // Optional
+        //
+        if (j.contains("size")) j.at("size").get_to(m_type->m_size);
+        if (j.contains("alignment")) j.at("alignment").get_to(m_type->m_alignment);
+        if (j.contains("inheritance")) j.at("inheritance").get_to(m_type->m_inheritance);
+
+        m_type->m_fields.clear();
+        if (j.contains("layout")) {
+            auto& layout = j.at("layout");
+            if (layout.is_array()) {
+                for (const auto & it : layout) {
+                    if (!importField(it)) {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        m_type->m_functions.clear();
+        if (j.contains("funcs")) {
+            auto& funcs = j.at("funcs");
+            if (funcs.is_array()) {
+                for (const auto& it : funcs) {
+                    if (!importFunction(it, false)) {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        m_type->m_memberFunctions.clear();
+        if (j.contains("memfuncs")) {
+            auto& funcs = j.at("memfuncs");
+            if (funcs.is_array()) {
+                for (const auto& it : funcs) {
+                    if (!importFunction(it, true)) {
+                        return false;
+                    }
+                }
+            }
         }
 
         m_schema->addType(m_type.get());
         return true;
     }
 
-    bool SchemaFile::importSymbols(const nlohmann::json& j) {
-        if (!j.is_array()) return false;
+    bool SchemaFile::importField(const nlohmann::json& j) {
+        if (!j.is_object()) return false;
 
-        for (auto& symbol : j) {
-            if (!importSymbol(symbol)) {
-                return false;
-            }
-        }
+        //
+        // Obligatory
+        //
+        std::string typeName;
+        std::string name;
 
+        j.at("type").get_to(typeName);
+        j.at("name").get_to(name);
+
+        TypeDescriptor* type = m_schema->findTypeDescriptorByName(typeName);
+        if (type == nullptr) return false;
+
+        //
+        // Optional
+        //
+        std::uint64_t offset = Field::UNKNOWN_OFFSET;
+
+        if (j.contains("offset")) j.at("offset").get_to(offset);
+
+        m_type->m_fields.emplace_back(type, name, offset);
         return true;
     }
 
-    bool SchemaFile::importSymbol(const nlohmann::json& j) {
-        if (!j.is_object() || !j.contains("type")) return false;
+    bool SchemaFile::importFunction(const nlohmann::json& j, bool isMember) {
+        FunctionSignature signature;
+        FunctionResolution resolution;
+        FunctionResolverPtr resolver;
 
-        SymbolType type;
-        j.at("type").get_to(type);
+        //
+        // Obligatory
+        //
+        j.at("name").get_to(signature.m_name);
+        j.at("ret").get_to(signature.m_returnType);
+        j.at("resolution").get_to(resolution);
 
-        std::unique_ptr<Symbol>* symbol = nullptr;
-        switch (type) {
-            case SymbolType::Function: {
-                auto* func = new FunctionSymbol();
-                from_json(j, *func);
-                symbol = &(m_symbols.emplace_back(std::unique_ptr<Symbol>(func)));
-            }
-                break;
+        if (resolution == FunctionResolution::Invalid ||
+            (resolution == FunctionResolution::Virtual && !isMember)) {
+            return false;
+        }
 
-            case SymbolType::MemberFunction: {
-                auto* memfunc = new MemberFunctionSymbol();
-                from_json(j, *memfunc);
-                symbol = &(m_symbols.emplace_back(std::unique_ptr<Symbol>(memfunc)));
-            }
-                break;
+        switch (resolution) {
+            case FunctionResolution::Fixed: {
+                FixedFunctionResolver::AddressOffsetReference address;
+
+                auto& addressJ = j.at("address");
+                if (addressJ.is_string()) {
+                    Symbol* symbol = m_schema->findSymbolByName(addressJ.get<std::string>());
+                    if (symbol == nullptr) return false;
+                    address = symbol;
+                } else if (addressJ.is_number_unsigned()) {
+                    address = addressJ.get<std::uint64_t>();
+                } else {
+                    return false;
+                }
+
+                resolver = FunctionResolverPtr(new FixedFunctionResolver(address));
+            } break;
+
+            case FunctionResolution::Virtual: {
+                std::uint64_t vindex;
+                j.at("vindex").get_to(vindex);
+                resolver = FunctionResolverPtr(new VirtualFunctionResolver(vindex));
+            } break;
 
             default:
                 return false;
         }
 
-        if (symbol != nullptr) {
-            m_schema->addSymbol(symbol->get());
+        //
+        // Optional
+        //
+        signature.m_arguments.clear();
+        if (j.contains("args")) {
+            auto& args = j.at("args");
+            if (!args.is_array()) return false;
+            for (const auto& arg : args) {
+                std::string type;
+                std::string name;
+
+                arg.at("type").get_to(type);
+                arg.at("name").get_to(name);
+
+                signature.m_arguments.emplace_back(type, name);
+            }
+        }
+
+        if (isMember) {
+            m_type->m_memberFunctions.emplace_back(signature, std::move(resolver));
+        } else {
+            m_type->m_functions.emplace_back(signature, std::move(resolver));
         }
         return true;
     }
-
-
-
 
     bool SchemaFile::generate(const std::filesystem::path& headerPath,
                               const std::filesystem::path& sourcePath,
@@ -161,6 +261,30 @@ namespace GoMint {
         }
 
         return generateHeader(headerFile, includePrefix) && generateSource(sourceFile, includePrefix);
+    }
+
+    bool SchemaFile::generateFunctionPointerLoaders(FileWriter& writer, const std::string& baseaddrVar) {
+        if (m_type == nullptr) return true;
+
+        for (auto& func : m_type->m_functions) {
+            if (!generateFunctionPointerLoader(writer, baseaddrVar, func, false)) return false;
+        }
+
+        for (auto& func : m_type->m_memberFunctions) {
+            if (!generateFunctionPointerLoader(writer, baseaddrVar,  func, true)) return false;
+        }
+        return true;
+    }
+
+    bool SchemaFile::generateFunctionPointerLoader(FileWriter& writer, const std::string& baseaddrVar, Function& function, bool isMember) {
+        auto* resolver = function.getResolver();
+        if (!resolver->hasFunctionPointer()) return true;
+
+        std::string pointerTypename;
+        std::string pointerVarname;
+        getPointerNames(pointerTypename, pointerVarname, function);
+
+        return resolver->generateFunctionPointerLoader(writer, baseaddrVar, m_type.get(), &function, pointerTypename, pointerVarname, isMember);
     }
 
     bool SchemaFile::createDirectories(const std::filesystem::path& file) {
@@ -181,9 +305,9 @@ namespace GoMint {
         writer.newline();
         generateNamespaceBegin(writer);
         writer.newline();
-        generateSymbolDeclarations(writer);
-        writer.newline();
-        generateTypeDeclaration(writer);
+        if (!generateTypeDeclaration(writer)) {
+            return false;
+        }
         writer.newline();
         generateNamespaceEnd(writer);
         writer.newline();
@@ -202,7 +326,9 @@ namespace GoMint {
         writer.newline();
         generateNamespaceBegin(writer);
         writer.newline();
-        generateTypeDefinition(writer);
+        if (!generateTypeDefinition(writer)) {
+            return false;
+        }
         writer.newline();
         generateNamespaceEnd(writer);
         return true;
@@ -243,81 +369,138 @@ namespace GoMint {
         writer.decreaseIndent().newline() << "} }";
     }
 
-    void SchemaFile::generateSymbolDeclarations(FileWriter& writer) {
-        writer.newline() << "//";
-        writer.newline() << "// Symbol Types";
-        writer.newline() << "//";
-        for (auto& symbol : m_symbols) {
-            generateSymbolTypeDeclaration(writer, symbol.get());
-        }
-
-        writer.newline();
-
-        writer.newline() << "//";
-        writer.newline() << "// Symbol List";
-        writer.newline() << "//";
-        for (auto& symbol : m_symbols) {
-            generateSymbolVariableDeclaration(writer, symbol.get());
-        }
-    }
-
-    void SchemaFile::generateSymbolTypeDeclaration(FileWriter& writer, Symbol* symbol) {
-        writer.newline() << "using " << symbol->m_pointerType << " = ";
-        symbol->generatePointerTypeDeclaration(writer);
-        writer.cont() << ";";
-    }
-
-    void SchemaFile::generateSymbolVariableDeclaration(FileWriter& writer, Symbol* symbol) {
-        writer.newline() << "extern " << symbol->m_pointerType << " " << symbol->m_variableName << ";";
-    }
-
-    void SchemaFile::generateTypeDeclaration(FileWriter& writer) {
-        if (m_type == nullptr) return;
+    bool SchemaFile::generateTypeDeclaration(FileWriter& writer) {
+        if (m_type == nullptr) return true;
 
         writer.newline() << "class " << m_type->m_name << " {";
         writer.newline();
         writer.newline() << "public:";
         writer.increaseIndent();
 
-        if (!m_type->m_members.empty()) {
-            std::uint64_t currentOffset = 0;
-            std::size_t paddingCount = 0;
-            for (auto& member : m_type->m_members) {
-                if (member.m_offset != Member::INVALID_OFFSET && member.m_offset > currentOffset) {
-                    // Generate padding
-                    std::uint64_t diff = member.m_offset - currentOffset;
-                    writer.newline() << "std::uint8_t m_unknown" << (paddingCount++) << "[" << diff << "];";
-                    currentOffset += diff;
-                }
-
-                writer.newline() << member.m_type << " " << member.m_name << ";";
-                currentOffset += member.m_size;
+        if (!m_type->m_fields.empty()) {
+            if (!generateTypeLayout(writer)) {
+                return false;
             }
-            if (m_type->m_size > currentOffset) {
-                writer.newline() << "std::uint8_t m_unknown" << (paddingCount++) << "[" << (m_type->m_size - currentOffset) << "];";
-            }
-            writer.newline();
         }
 
         if (!m_type->m_functions.empty()) {
-            for (auto& func : m_type->m_functions) {
-                writer.newline();
-                func.m_symbol->generateFunctionDeclaration(writer, func.m_name);
-                writer.cont() << ";";
+            if (!generateTypeFunctionDeclarations(writer, m_type->m_functions, false)) {
+                return false;
             }
-            writer.newline();
         }
 
         if (!m_type->m_memberFunctions.empty()) {
-            for (auto& memfunc : m_type->m_memberFunctions) {
-                writer.newline();
-                memfunc.m_symbol->generateMemberFunctionDeclaration(writer, memfunc.m_name);
-                writer.cont() << ";";
+            if (!generateTypeFunctionDeclarations(writer, m_type->m_memberFunctions, true)) {
+                return false;
             }
-            writer.newline();
         }
 
         writer.decreaseIndent().newline() << "};";
+        return true;
+    }
+
+    bool SchemaFile::generateTypeLayout(FileWriter& writer) {
+        if (!m_type->hasSize()) {
+            return false;
+        }
+
+        std::uint64_t currentOffset = 0;
+        std::size_t   paddingCount  = 0;
+
+        std::sort(m_type->m_fields.begin(), m_type->m_fields.end(), [&](const Field& a, const Field& b) -> bool {
+            return a.getOffset() < b.getOffset();
+        });
+
+        for (auto& field : m_type->m_fields) {
+            if (field.hasOffset() && field.getOffset() > currentOffset) {
+                // Generate padding
+                std::uint64_t diff = field.getOffset() - currentOffset;
+                writer.newline() << "std::uint8_t m_unknown" << (paddingCount++) << "[" << diff << "];";
+                currentOffset += diff;
+            }
+
+            writer.newline() << field.getType()->getName() << " " << field.getName() << ";";
+            currentOffset += field.getType()->getSize();
+        }
+
+        if (m_type->m_size > currentOffset) {
+            writer.newline() << "std::uint8_t m_unknown" << (paddingCount++) << "["
+                             << (m_type->m_size - currentOffset) << "];";
+        }
+
+        writer.newline();
+        return true;
+    }
+
+    bool SchemaFile::generateTypeFunctionDeclarations(FileWriter& writer, std::vector<Function>& functions, bool isMember) {
+        for (auto& function : functions) {
+            if (!generateTypeFunctionPointerDeclaration(writer, function, isMember)) return false;
+            if (!generateTypeFunctionDeclaration(writer, function, isMember)) return false;
+            writer.newline();
+        }
+        return true;
+    }
+
+    bool SchemaFile::generateTypeFunctionPointerDeclaration(FileWriter& writer, Function& function, bool isMember) {
+        auto& sig = function.getSignature();
+
+        std::string pointerContextInsert;
+        std::string pointerTypename;
+        std::string pointerVarname;
+
+        if (!getPointerContextInsert(pointerContextInsert, isMember)) return false;
+        getPointerNames(pointerTypename, pointerVarname, function);
+
+        // Pointer Type Declaration
+        writer.newline() << "using " << pointerTypename << " = " << sig.m_returnType << "(" << pointerContextInsert << "*)(";
+        generateArgumentList(writer, sig.m_arguments, true);
+        writer.cont() << ");";
+
+        // Pointer Declaration
+        if (function.getResolver()->hasFunctionPointer()) {
+            writer.newline() << "static " << pointerTypename << " " << pointerVarname << ";";
+        }
+        return true;
+    }
+
+    bool SchemaFile::generateTypeFunctionDeclaration(FileWriter& writer, Function& function, bool isMember) {
+        writer.newline();
+        if (!isMember) {
+            writer.cont() << "static ";
+        }
+
+        auto& sig = function.getSignature();
+
+        writer.cont() << sig.m_returnType << " " << sig.m_name << "(";
+        generateArgumentList(writer, sig.m_arguments, true);
+        writer.cont() << ");";
+        return true;
+    }
+
+    bool SchemaFile::getPointerContextInsert(std::string& out, bool isMember) {
+        if (isMember) {
+            switch (m_type->m_inheritance) {
+                case TypeInheritance::Single:
+                    out = "SingleInvocable::";
+                    break;
+
+                case TypeInheritance::Multi:
+                    out = "MultiInvocable::";
+                    break;
+
+                default:
+                    return false;
+            }
+        } else {
+            out = "";
+        }
+        return true;
+    }
+
+    void SchemaFile::getPointerNames(std::string& outTypename, std::string& outVarname, Function& function) {
+        const auto& name = function.getSignature().m_name;
+        outTypename = name + "_funcptr";
+        outVarname = "k_" + name;
     }
 
 
@@ -325,69 +508,62 @@ namespace GoMint {
         writer.newline() << "#include <" << includePrefix << m_filename << ".h>";
     }
 
-    void SchemaFile::generateTypeDefinition(FileWriter& writer) {
-        if (m_type == nullptr) return;
+    bool SchemaFile::generateTypeDefinition(FileWriter& writer) {
+        if (m_type == nullptr) return true;
 
-        for (auto& func : m_type->m_functions) {
-            writer.newline();
-            func.m_symbol->generateFunctionDefinition(writer, m_type->m_name, func.m_name);
-            writer.cont() << " {";
-            writer.increaseIndent();
-
-            if (func.m_symbol->m_returnType != "void") {
-                writer.newline() << "return ";
-            } else {
-                writer.newline();
-            }
-            writer.newline() << func.m_symbol->m_variableName << "(";
-            generateArgumentList(writer, func.m_symbol->m_arguments);
-            writer.cont() << ");";
-
-            writer.decreaseIndent().newline() << "}";
-            writer.newline();
-        }
-
+        if (!generateTypeFunctionDefinitions(writer, m_type->m_functions, false)) return false;
         writer.newline();
+        if (!generateTypeFunctionDefinitions(writer, m_type->m_memberFunctions, true)) return false;
 
-        for (auto& func : m_type->m_memberFunctions) {
-            writer.newline();
-            func.m_symbol->generateMemberFunctionDefinition(writer, m_type->m_name, func.m_name);
-            writer.cont() << " {";
-            writer.increaseIndent();
-
-            writer.newline() << "auto* self = reinterpret_cast<";
-            switch(func.m_symbol->m_inheritance) {
-                case TypeInheritance::Single:
-                    writer.cont() << "SingleInvocable";
-                    break;
-                case TypeInheritance::Multi:
-                    writer.cont() << "MultiInvocable";
-                    break;
-                default:
-                    writer.cont() << "void";
-                    break;
-            }
-            writer.cont() << "*>(this);";
-
-            if (func.m_symbol->m_returnType != "void") {
-                writer.newline() << "return ";
-            } else {
-                writer.newline();
-            }
-
-            writer.cont() << "(self->*" << func.m_symbol->m_variableName << ")(";
-            generateArgumentList(writer, func.m_symbol->m_arguments);
-            writer.cont() << ");";
-
-            writer.decreaseIndent().newline() << "}";
-            writer.newline();
-        }
+        return true;
     }
 
-    void SchemaFile::generateArgumentList(FileWriter& writer, const std::vector<FunctionArgument>& args) {
+    bool SchemaFile::generateTypeFunctionDefinitions(FileWriter& writer, std::vector<Function>& functions, bool isMember) {
+        for (auto& func : functions) {
+            if (func.getResolver()->hasFunctionPointer()) {
+                if (!generateTypeFunctionPointerDefinitions(writer, func, isMember)) return false;
+            }
+            if (!generateTypeFunctionDefinition(writer, func, isMember)) return false;
+        }
+        return true;
+    }
+
+    bool SchemaFile::generateTypeFunctionPointerDefinitions(FileWriter& writer, Function& function, bool isMember) {
+        std::string pointerTypename;
+        std::string pointerVarname;
+        getPointerNames(pointerTypename, pointerVarname, function);
+
+        writer.newline() << m_type->getName() << "::" << pointerTypename << " " << m_type->m_name << "::" << pointerVarname << " = nullptr;";
+        return true;
+    }
+
+    bool SchemaFile::generateTypeFunctionDefinition(FileWriter& writer, Function& function, bool isMember) {
+        auto& sig = function.getSignature();
+
+        std::string pointerTypename;
+        std::string pointerVarname;
+        getPointerNames(pointerTypename, pointerVarname, function);
+
+        writer.newline() << sig.m_returnType << " " << m_type->m_name << "::" << sig.m_name << "(";
+        generateArgumentList(writer, sig.m_arguments, true);
+        writer.cont() << ") {";
+        writer.increaseIndent();
+
+        if (!function.getResolver()->generateFunctionInvocation(writer, m_type.get(), &function, pointerTypename, pointerVarname, isMember)) {
+            return false;
+        }
+
+        writer.decreaseIndent().newline() << "}";
+        return true;
+    }
+
+    void SchemaFile::generateArgumentList(FileWriter& writer, const std::vector<FunctionArgument>& args, bool types) {
         for (std::size_t i = 0; i < args.size(); ++i) {
             if (i != 0) {
                 writer.cont() << ", ";
+            }
+            if (types) {
+                writer.cont() << args[i].m_type << " ";
             }
             writer.cont() << args[i].m_name;
         }

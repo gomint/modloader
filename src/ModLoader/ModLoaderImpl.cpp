@@ -95,10 +95,10 @@ namespace GoMint {
 
     bool ModLoader::installHooks() {
         bool success = true;
-        success &= m_hooks.registerMemberHook(SymExtract::g_DedicatedServer_start,
+        success &= m_hooks.registerMemberHook(SymExtract::DedicatedServer::k_start,
                                               &ModLoader::hook_DedicatedServer_start,
                                               hook_DedicatedServer_start_callback);
-        success &= m_hooks.registerMemberHook(SymExtract::g_ServerInstanceEventCoordinator_sendServerInitializeEnd,
+        success &= m_hooks.registerMemberHook(SymExtract::ServerInstanceEventCoordinator::k_sendServerInitializeEnd,
                                               &ModLoader::hook_ServerInstanceEventCoordinator_sendServerInitializeEnd,
                                               hook_ServerInstanceEventCoordinator_sendServerInitializeEnd_callback);
         return success && m_hooks.install();
@@ -194,7 +194,7 @@ namespace GoMint {
 #endif
         BlockTypeRegistry registry;
         registry.forEachBlock([&](const IBlockLegacy& block) -> bool {
-            m_logger->info("Detected block: {}", block.getIdentifier());
+            m_logger->info("Detected block: {}, explosion resistance={}", block.getIdentifier(), block.getExplosionResistance());
             return true;
         });
     }
@@ -247,11 +247,11 @@ namespace GoMint {
 }
 
 extern "C" {
-MODLOADER_API GoMint::IModLoader* MODLOADER_CALL get_mod_loader_instance() {
-    GoMint::ModLoader& loader = GoMint::ModLoader::k_instance;
-    if (loader.m_staticallyInitialized && loader.m_dynamicallyInitialized) {
-        return &loader;
+    MODLOADER_API GoMint::IModLoader* MODLOADER_CALL get_mod_loader_instance() {
+        GoMint::ModLoader& loader = GoMint::ModLoader::k_instance;
+        if (loader.m_staticallyInitialized && loader.m_dynamicallyInitialized) {
+            return &loader;
+        }
+        return nullptr;
     }
-    return nullptr;
-}
 }

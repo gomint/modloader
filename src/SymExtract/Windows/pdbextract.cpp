@@ -72,7 +72,7 @@ namespace GoMint {
             return TRUE;
         }
 
-        symbol->m_addressOffset = pSymInfo->Address - pSymInfo->ModBase;
+        symbol->setAddressOffset(pSymInfo->Address - pSymInfo->ModBase);
         return TRUE;
     }
 

@@ -20,6 +20,7 @@ namespace GoMint {
 
         const std::string& getIdentifier() const override;
         const std::string& getNamespace() const override;
+        float getExplosionResistance() const override;
 
     private:
 

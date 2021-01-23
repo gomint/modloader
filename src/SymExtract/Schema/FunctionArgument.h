@@ -8,7 +8,6 @@
 #define MODLOADER_FUNCTIONARGUMENT_H
 
 #include <string>
-#include <nlohmann/json.hpp>
 
 namespace GoMint {
 
@@ -17,10 +16,9 @@ namespace GoMint {
         std::string m_type;
         std::string m_name;
 
-    };
+        FunctionArgument(std::string type, std::string name) : m_type{std::move(type)}, m_name{std::move(name)} {}
 
-    void to_json(nlohmann::json& j, const FunctionArgument& p);
-    void from_json(const nlohmann::json& j, FunctionArgument& p);
+    };
 
 }
 

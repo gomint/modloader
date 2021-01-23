@@ -79,7 +79,7 @@ namespace GoMint::SymExtract {
     };
 
     template<typename MemberFunctionPtr>
-    inline MemberFunctionPtr createMemberFunctionPointer(std::uintptr_t address) {
+    inline MemberFunctionPtr makeMemfnPtr(std::uintptr_t address) {
         static_assert(
                 sizeof(MicrosoftSingleMFP) == sizeof(MemberFunctionPtr),
                 "single-inheritance member function pointer size mismatch"
@@ -95,7 +95,7 @@ namespace GoMint::SymExtract {
     }
 
     template<typename MemberFunctionPtr>
-    inline MemberFunctionPtr createMemberFunctionPointer(std::uintptr_t address, std::intptr_t thisdelta) {
+    inline MemberFunctionPtr makeMemfnPtr(std::uintptr_t address, std::intptr_t thisdelta) {
         static_assert(
                 sizeof(MicrosoftMultiMFP) == sizeof(MemberFunctionPtr),
                 "multi-inheritance member function pointer size mismatch"
@@ -113,7 +113,7 @@ namespace GoMint::SymExtract {
     }
 
     template<typename MemberFunctionPtr>
-    inline std::uintptr_t retrieveFunctionAddress(MemberFunctionPtr ptr) {
+    inline std::uintptr_t getMemfnAddress(MemberFunctionPtr ptr) {
         union {
             std::uintptr_t m_address;
             MemberFunctionPtr m_ptr;
@@ -122,8 +122,12 @@ namespace GoMint::SymExtract {
         u.m_ptr = ptr;
         return u.m_address;
     };
-#elif defined(__GNUC__)
 
+    inline std::uintptr_t vtableLookup(void* thisptr, std::uint64_t vindex) {
+        return reinterpret_cast<std::uintptr_t>((*((void***) thisptr))[vindex]);
+    }
+
+#elif defined(__GNUC__)
 #   define SYMEXTRACT_CDECL    __attribute__ ((cdecl))
 #   define SYMEXTRACT_THISCALL __attribute__ ((thiscall))
 #   define SYMEXTRACT_STDCALL  __attribute__ ((stdcall))
@@ -135,7 +139,7 @@ namespace GoMint::SymExtract {
     };
 
     template<typename MemberFunctionPtr>
-    inline MemberFunctionPtr createMemberFunctionPointer(std::uintptr_t address) {
+    inline MemberFunctionPtr makeMemfnPtr(std::uintptr_t address) {
         static_assert(
                 sizeof(GnuMFP) == sizeof(MemberFunctionPtr),
                 "single-inheritance member function pointer size mismatch"
@@ -152,7 +156,7 @@ namespace GoMint::SymExtract {
     }
 
     template<typename MemberFunctionPtr>
-    inline MemberFunctionPtr createMemberFunctionPointer(std::uintptr_t address, std::intptr_t thisdelta) {
+    inline MemberFunctionPtr makeMemfnPtr(std::uintptr_t address, std::intptr_t thisdelta) {
         static_assert(
                 sizeof(GnuMFP) == sizeof(MemberFunctionPtr),
                 "multi-inheritance member function pointer size mismatch"
@@ -170,7 +174,7 @@ namespace GoMint::SymExtract {
     }
 
     template<typename MemberFunctionPtr>
-    inline std::uintptr_t retrieveFunctionAddress(MemberFunctionPtr ptr) {
+    inline std::uintptr_t getMemfnAddress(MemberFunctionPtr ptr) {
         union {
             std::uintptr_t m_address;
             MemberFunctionPtr m_ptr;
@@ -179,6 +183,10 @@ namespace GoMint::SymExtract {
         u.m_ptr = ptr;
         return u.m_address;
     };
+
+    inline std::uintptr_t vtableLookup(void* thisptr, std::size_t vindex) {
+        return reinterpret_cast<std::uintptr_t>((*((void***) thisptr))[vindex]);
+    }
 #endif
 
 }

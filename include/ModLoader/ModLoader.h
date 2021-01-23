@@ -137,6 +137,11 @@ namespace GoMint {
          */
         virtual const std::string& getNamespace() const = 0;
 
+        /**
+         * @return The block's explosion resistance
+         */
+        virtual float getExplosionResistance() const = 0;
+
     };
 
     /**

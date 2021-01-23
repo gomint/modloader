@@ -77,10 +77,10 @@ namespace GoMint {
         //
         // Hooks
         //
-        SymExtract::DedicatedServer_start_funcptr hook_DedicatedServer_start_callback;
+        SymExtract::DedicatedServer::start_funcptr hook_DedicatedServer_start_callback;
         void hook_DedicatedServer_start(const std::string& sessionId);
 
-        SymExtract::ServerInstanceEventCoordinator_sendServerInitializeEnd_funcptr hook_ServerInstanceEventCoordinator_sendServerInitializeEnd_callback;
+        SymExtract::ServerInstanceEventCoordinator::sendServerInitializeEnd_funcptr hook_ServerInstanceEventCoordinator_sendServerInitializeEnd_callback;
         void hook_ServerInstanceEventCoordinator_sendServerInitializeEnd(void* server);
 
         HookDispatcher m_hooks;

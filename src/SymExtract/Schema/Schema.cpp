@@ -19,6 +19,27 @@ namespace GoMint {
         in >> j;
         in.close();
 
+        // Load symbols and their definitions
+        if (j.contains("symbols")) {
+            auto& sj = j.at("symbols");
+            if (!sj.is_object()) {
+                return false;
+            }
+
+            for (auto& el : sj.items()) {
+                if (!el.value().is_string()) return false;
+
+                if (m_symbolsByName.find(el.key()) != m_symbolsByName.end()) {
+                    continue;
+                }
+
+                auto& ref = m_symbols.emplace_back(std::make_unique<Symbol>(el.key(), el.value().get<std::string>()));
+                m_symbolsByName.emplace(ref->getName(), ref.get());
+                m_symbolsByLookup.emplace(ref->getLookup(), ref.get());
+            }
+        }
+
+        // Load platform specific sizes of standard types
         if (j.contains("typesizes")) {
             auto& tj = j.at("typesizes");
             if (!tj.is_object()) {
@@ -31,33 +52,14 @@ namespace GoMint {
                 const auto& name = el.key();
                 auto size = el.value().get<std::uint64_t>();
 
-                m_typeSizeDeclarations.emplace_back(std::make_unique<TypeSizeDeclaration>(name, size));
-                m_typeSizeDescriptors.emplace(name, m_typeSizeDeclarations.back().get());
+                auto& ref = m_externTypes.emplace_back(std::make_unique<ExternType>(name, size));
+                m_typeDescriptors.emplace(name, ref.get());
             }
         }
 
+        // Load actual schema
         if (!loadFile(schema)) {
             return false;
-        }
-
-        if (j.contains("symbolnames")) {
-            auto& sj = j.at("symbolnames");
-            if (!sj.is_object()) {
-                return false;
-            }
-
-            for (auto& el : sj.items()) {
-                if (!el.value().is_string()) return false;
-
-                const auto& name = el.key();
-                auto finder = m_symbolsByName.find(name);
-                if (finder == m_symbolsByName.end()) {
-                    continue;
-                }
-
-                finder->second->m_symbolName = el.value().get<std::string>();
-                m_symbolsByLookup.insert(std::make_pair(finder->second->m_symbolName, finder->second));
-            }
         }
 
         return true;
@@ -65,7 +67,7 @@ namespace GoMint {
 
     bool Schema::loadFile(const std::filesystem::path& path) {
         SchemaFile file(this);
-        bool isOutputFile = false;
+        bool       isOutputFile = false;
         if (!file.import(path, isOutputFile)) {
             return false;
         }
@@ -76,7 +78,7 @@ namespace GoMint {
         return true;
     }
 
-    Symbol * Schema::findSymbolByName(const std::string& name) {
+    Symbol* Schema::findSymbolByName(const std::string& name) {
         auto it = m_symbolsByName.find(name);
         return (it == m_symbolsByName.end()) ? nullptr : it->second;
     }
@@ -86,19 +88,27 @@ namespace GoMint {
         return (it == m_symbolsByLookup.end()) ? nullptr : it->second;
     }
 
-    TypeSizeDescriptor * Schema::findTypeSizeByName(const std::string& name) {
-        auto it = m_typeSizeDescriptors.find(name);
-        return (it == m_typeSizeDescriptors.end()) ? nullptr : it->second;
+    TypeDescriptor* Schema::findTypeDescriptorByName(const std::string& name) {
+        auto it = m_typeDescriptors.find(name);
+        return (it == m_typeDescriptors.end()) ? nullptr : it->second;
+    }
+
+    std::optional<std::reference_wrapper<const Constant>> Schema::findConstantByName(const std::string& name) {
+        auto it = m_constants.find(name);
+        return (it == m_constants.end()) ?
+            std::optional<std::reference_wrapper<const Constant>>() :
+            std::make_optional(std::reference_wrapper<const Constant>(it->second));
     }
 
     bool Schema::validate(bool verbose) {
         bool valid = true;
         for (auto& symbol : m_symbols) {
-            if (symbol->m_addressOffset == 0) {
-                if (verbose) printf("%s: missing\n", symbol->m_name.c_str());
+            if (!symbol->hasAddressOffset()) {
+                if (verbose) printf("%s: missing\n", symbol->getName().c_str());
                 valid = false;
             } else {
-                if (verbose) printf("%s: %p\n", symbol->m_name.c_str(), reinterpret_cast<void*>(symbol->m_addressOffset));
+                if (verbose)
+                    printf("%s: %p\n", symbol->getName().c_str(), reinterpret_cast<void*>(symbol->getAddressOffset()));
             }
         }
         return valid;
@@ -118,14 +128,9 @@ namespace GoMint {
                generateSource(sourcePath / "Symbols.cpp", includePrefix);
     }
 
-    void Schema::addSymbol(Symbol* symbol) {
-        m_symbols.push_back(symbol);
-        m_symbolsByName.insert(std::make_pair(symbol->m_name, symbol));
-    }
-
     void Schema::addType(Type* type) {
         m_types.push_back(type);
-        m_typeSizeDescriptors.emplace(type->getName(), type);
+        m_typeDescriptors.emplace(type->getName(), type);
     }
 
     void Schema::addInclude(const std::string& include) {
@@ -151,7 +156,7 @@ namespace GoMint {
         writer.increaseIndent();
 
         for (auto& type : m_types) {
-            writer.newline() << "class " << type->m_name << ";";
+            writer.newline() << "class " << type->getName() << ";";
         }
         writer.newline();
         writer.newline() << "bool loadSymbols();";
@@ -179,9 +184,6 @@ namespace GoMint {
         writer.newline() << "namespace GoMint { namespace SymExtract {";
         writer.increaseIndent();
 
-        for (auto& symbol : m_symbols) {
-            writer.newline() << symbol->m_pointerType << " " << symbol->m_variableName << " = nullptr;";
-        }
         writer.newline();
         generateBaseAddressLoader(writer);
         writer.newline();
@@ -190,10 +192,10 @@ namespace GoMint {
 
         writer.newline() << "std::uintptr_t baseAddress = getBaseAddress();";
         writer.newline() << "if (baseAddress == 0) return false;";
-        for (auto& symbol : m_symbols) {
-            writer.newline() << symbol->m_variableName << " = ";
-            symbol->generateVariableCast(writer, "(baseAddress + " + std::to_string(symbol->m_addressOffset) + "ULL)");
-            writer.cont() << ";";
+        for (auto& schemaFile : m_files) {
+            if (!schemaFile.generateFunctionPointerLoaders(writer, "baseAddress")) {
+                return false;
+            }
         }
         writer.newline() << "return true;";
         writer.decreaseIndent().newline() << "}";

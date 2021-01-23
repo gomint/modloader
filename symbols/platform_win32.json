@@ -1,5 +1,5 @@
 {
-    "symbolnames": {
+    "symbols": {
         "DedicatedServer::start": "DedicatedServer::start",
         "BlockTypeRegistry::forEachBlock": "BlockTypeRegistry::forEachBlock",
         "ServerInstanceEventCoordinator::sendServerInitializeEnd": "ServerInstanceEventCoordinator::sendServerInitializeEnd"
@@ -10,6 +10,10 @@
         "std::uint16_t": 2,
         "std::uint32_t": 4,
         "std::uint64_t": 8,
-        "std::string": 32
+        "std::string": 32,
+        "std::vector": 24,
+        "int": 4,
+        "float": 4,
+        "double": 8
     }
 }

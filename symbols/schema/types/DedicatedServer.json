@@ -6,28 +6,21 @@
     ],
     "type": {
         "name": "DedicatedServer",
+        "inheritance": "single",
         "funcs": [],
         "memfuncs": [
             {
                 "name": "start",
-                "symbol": "DedicatedServer::start"
+                "resolution": "fixed",
+                "address": "DedicatedServer::start",
+                "ret": "void",
+                "args": [
+                    {
+                        "type": "const std::string&",
+                        "name": "sessionID"
+                    }
+                ]
             }
         ]
-    },
-    "symbols": [
-        {
-            "name": "DedicatedServer::start",
-            "type": "memfunc",
-            "ptrtype": "DedicatedServer_start_funcptr",
-            "varname": "g_DedicatedServer_start",
-            "inheritance": "single",
-            "ret": "void",
-            "args": [
-                {
-                    "type": "const std::string&",
-                    "name": "sessionID"
-                }
-            ]
-        }
-    ]
+    }
 }

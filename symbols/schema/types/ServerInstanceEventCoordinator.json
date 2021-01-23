@@ -4,27 +4,17 @@
     "includes": [],
     "type": {
         "name": "ServerInstanceEventCoordinator",
+        "inheritance": "single",
         "memfuncs": [
             {
                 "name": "sendServerInitializeEnd",
-                "symbol": "ServerInstanceEventCoordinator::sendServerInitializeEnd"
+                "resolution": "fixed",
+                "address": "ServerInstanceEventCoordinator::sendServerInitializeEnd",
+                "ret": "void",
+                "args": [
+                    { "type": "void*", "name": "server" }
+                ]
             }
         ]
-    },
-    "symbols": [
-        {
-            "name": "ServerInstanceEventCoordinator::sendServerInitializeEnd",
-            "type": "memfunc",
-            "ptrtype": "ServerInstanceEventCoordinator_sendServerInitializeEnd_funcptr",
-            "varname": "g_ServerInstanceEventCoordinator_sendServerInitializeEnd",
-            "inheritance": "single",
-            "ret": "void",
-            "args": [
-                {
-                    "type": "void*",
-                    "name": "server"
-                }
-            ]
-        }
-    ]
+    }
 }
